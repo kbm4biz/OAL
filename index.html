@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Report Generator</title>
   <style>
-    /* General styling and blue color scheme */
     body {
       font-family: Arial, sans-serif;
       background: #e3f2fd;
@@ -47,108 +46,105 @@
     button:hover {
       background-color: #1976d2;
     }
-    /* Hide loading and response containers initially */
     #loading-container, #response-container {
       display: none;
     }
-    /* Floating emojis */
-    .floating-emoji {
-      position: absolute;
-      bottom: 10%;
-      font-size: 2rem;
-      animation: floatUp 3s infinite;
-      opacity: 0;
+    .report-link {
+      display: block;
+      margin: 20px 0;
+      color: #2196f3;
+      text-decoration: none;
+      word-break: break-all;
     }
-    @keyframes floatUp {
-      0% { transform: translateY(0); opacity: 1; }
-      100% { transform: translateY(-100px); opacity: 0; }
-    }
-    /* Responsive design */
-    @media (max-width: 480px) {
-      .container { width: 95%; }
+    .report-link:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <!-- Form container -->
   <div class="container" id="form-container">
     <h2>Student Report Generator</h2>
     <form id="student-form">
-      <input type="text" id="studentId" name="studentId" placeholder="Enter Student ID" required />
-      <button type="submit">Submit</button>
+      <input type="text" id="studentId" name="studentId" 
+             placeholder="Enter Student ID" required
+             pattern="\d+" title="Please enter numbers only">
+      <button type="submit">Generate Report</button>
     </form>
   </div>
 
-  <!-- Loading container -->
   <div class="container" id="loading-container">
-    <h2>Report Generating in Progress</h2>
-    <p>Please wait...</p>
-    <div id="emoji-container">
-      <span class="floating-emoji" style="left:20%;">🎓</span>
-      <span class="floating-emoji" style="left:50%; animation-delay: 0.5s;">🚀</span>
-      <span class="floating-emoji" style="left:80%; animation-delay: 1s;">📚</span>
-    </div>
+    <h2>Processing Your Request</h2>
+    <p>Please wait while we generate your report...</p>
   </div>
 
-  <!-- Response container -->
   <div class="container" id="response-container">
-    <h2>Report</h2>
+    <h2>Report Ready</h2>
     <div id="response-content"></div>
-    <button id="back-button">Back</button>
+    <button onclick="showForm()">New Report</button>
   </div>
 
   <script>
-    document.getElementById('student-form').addEventListener('submit', function(e) {
+    const containers = {
+      form: document.getElementById('form-container'),
+      loading: document.getElementById('loading-container'),
+      response: document.getElementById('response-container')
+    };
+
+    const responseContent = document.getElementById('response-content');
+    const form = document.getElementById('student-form');
+
+    // Replace with your actual Power Automate Flow endpoint URL
+    const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
+
+    async function submitStudentId(studentId) {
+      try {
+        const response = await fetch(FLOW_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId })
+        });
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const data = await response.json();
+        if (!data?.reportUrl) throw new Error('Invalid response from server');
+        
+        return data.reportUrl;
+      } catch (error) {
+        console.error('Submission error:', error);
+        throw new Error('Failed to generate report. Please try again.');
+      }
+    }
+
+    function showForm() {
+      containers.response.style.display = 'none';
+      containers.form.style.display = 'block';
+      form.reset();
+    }
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const studentId = document.getElementById('studentId').value.trim();
 
-      // Hide form and response, show loading screen
-      document.getElementById('form-container').style.display = 'none';
-      document.getElementById('response-container').style.display = 'none';
-      document.getElementById('loading-container').style.display = 'block';
+      // UI state updates
+      containers.form.style.display = 'none';
+      containers.response.style.display = 'none';
+      containers.loading.style.display = 'block';
+      responseContent.innerHTML = '';
 
-      var studentId = document.getElementById('studentId').value;
-      var payload = { studentId: studentId };
-
-      // Replace with your actual Power Automate Flow endpoint URL
-      var flowUrl = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
-
-      fetch(flowUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      .then(function(response) {
-        if (!response.ok) {
-          console.error('HTTP error:', response.status, response.statusText);
-          throw new Error('Network response was not ok');
-        }
-        return response.json(); // Ensure your flow returns JSON
-      })
-      .then(function(data) {
-        console.log("Flow response data:", data);
-        var reportUrl = data.reportUrl;
-        if (!reportUrl) {
-          throw new Error('Report URL not found in the response.');
-        }
-        // Introduce a 5-second delay before displaying the result
-        setTimeout(function() {
-          document.getElementById('loading-container').style.display = 'none';
-          document.getElementById('response-content').innerHTML =
-            'Report generated successfully. <a href="' + reportUrl + '" target="_blank">View Report</a>';
-          document.getElementById('response-container').style.display = 'block';
-        }, 5000); // Delay in milliseconds (5000ms = 5 seconds)
-      })
-      .catch(function(error) {
-        console.error('Fetch error:', error);
-        document.getElementById('loading-container').style.display = 'none';
-        document.getElementById('response-content').innerText = 'Error: ' + error.message;
-        document.getElementById('response-container').style.display = 'block';
-      });
-    });
-
-    document.getElementById('back-button').addEventListener('click', function() {
-      document.getElementById('response-container').style.display = 'none';
-      document.getElementById('form-container').style.display = 'block';
+      try {
+        const reportUrl = await submitStudentId(studentId);
+        
+        responseContent.innerHTML = `
+          <p>Your report is ready!</p>
+          <a href="${reportUrl}" class="report-link" target="_blank">View Report</a>
+        `;
+      } catch (error) {
+        responseContent.textContent = error.message;
+      } finally {
+        containers.loading.style.display = 'none';
+        containers.response.style.display = 'block';
+      }
     });
   </script>
 </body>
