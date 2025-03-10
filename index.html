@@ -59,6 +59,23 @@
     .report-link:hover {
       text-decoration: underline;
     }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2196f3;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      margin: 20px auto;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #loading-message {
+      color: #666;
+      margin: 15px 0;
+    }
   </style>
 </head>
 <body>
@@ -74,7 +91,8 @@
 
   <div class="container" id="loading-container">
     <h2>Processing Your Request</h2>
-    <p>Please wait while we generate your report...</p>
+    <p id="loading-message">Starting report generation...</p>
+    <div class="loader"></div>
   </div>
 
   <div class="container" id="response-container">
@@ -84,37 +102,20 @@
   </div>
 
   <script>
+    const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
+    const FETCH_TIMEOUT = 40000; // 40 seconds timeout
+
     const containers = {
       form: document.getElementById('form-container'),
       loading: document.getElementById('loading-container'),
       response: document.getElementById('response-container')
     };
-
     const responseContent = document.getElementById('response-content');
+    const loadingMessage = document.getElementById('loading-message');
     const form = document.getElementById('student-form');
 
-    // Replace with your actual Power Automate Flow endpoint URL
-    const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
-
-    async function submitStudentId(studentId) {
-      try {
-        const response = await fetch(FLOW_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentId })
-        });
-
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const data = await response.json();
-        if (!data?.reportUrl) throw new Error('Invalid response from server');
-        
-        return data.reportUrl;
-      } catch (error) {
-        console.error('Submission error:', error);
-        throw new Error('Failed to generate report. Please try again.');
-      }
-    }
+    let startTime;
+    let loadingInterval;
 
     function showForm() {
       containers.response.style.display = 'none';
@@ -122,30 +123,68 @@
       form.reset();
     }
 
-    form.addEventListener('submit', async (e) => {
+    function updateLoadingMessage() {
+      const seconds = Math.floor((Date.now() - startTime) / 1000);
+      loadingMessage.textContent = `Processing... (${seconds}s elapsed)`;
+    }
+
+    async function handleFormSubmit(e) {
       e.preventDefault();
       const studentId = document.getElementById('studentId').value.trim();
 
-      // UI state updates
+      // Reset state
       containers.form.style.display = 'none';
       containers.response.style.display = 'none';
       containers.loading.style.display = 'block';
       responseContent.innerHTML = '';
+      startTime = Date.now();
+      
+      // Start loading timer
+      loadingInterval = setInterval(updateLoadingMessage, 1000);
+      updateLoadingMessage();
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
       try {
-        const reportUrl = await submitStudentId(studentId);
+        const response = await fetch(FLOW_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
         
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data?.reportUrl) {
+          throw new Error('Invalid response format from server');
+        }
+
         responseContent.innerHTML = `
           <p>Your report is ready!</p>
-          <a href="${reportUrl}" class="report-link" target="_blank">View Report</a>
+          <a href="${data.reportUrl}" class="report-link" target="_blank">
+            View Report
+          </a>
         `;
       } catch (error) {
-        responseContent.textContent = error.message;
+        console.error('Error:', error);
+        const errorMessage = error.name === 'AbortError' 
+          ? 'Request timed out. Please try again.' 
+          : 'Failed to generate report. Please try again.';
+        responseContent.textContent = errorMessage;
       } finally {
+        clearInterval(loadingInterval);
         containers.loading.style.display = 'none';
         containers.response.style.display = 'block';
       }
-    });
+    }
+
+    form.addEventListener('submit', handleFormSubmit);
   </script>
 </body>
 </html>
