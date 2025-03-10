@@ -4,42 +4,28 @@
   <meta charset="UTF-8" />
   <title>Student Report Generator</title>
   <style>
-    /* Previous styles remain the same */
     body {
       font-family: Arial, sans-serif;
-      max-width: 600px;
+      max-width: 800px;
       margin: 40px auto;
       padding: 0 20px;
-    }
-    label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: bold;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 8px;
-      margin-bottom: 12px;
-      box-sizing: border-box;
-    }
-    button {
-      padding: 10px 15px;
-      cursor: pointer;
     }
     #output {
       margin-top: 20px;
       padding: 15px;
       border: 1px solid #ccc;
       border-radius: 4px;
-      min-height: 50px;
+      background-color: #f8f9fa;
     }
-    .success {
-      background-color: #e8f5e9;
-      border-color: #c8e6c9;
+    .response-section {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: white;
+      border: 1px solid #ddd;
     }
-    .error {
-      background-color: #ffebee;
-      border-color: #ffcdd2;
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
   </style>
 </head>
@@ -60,38 +46,37 @@
   <button type="submit">Generate Report</button>
 </form>
 
-<div id="output"></div>
+<div id="output">
+  <div class="response-section">
+    <h3>Raw Response:</h3>
+    <pre id="rawResponse"></pre>
+  </div>
+  <div class="response-section">
+    <h3>Formatted Result:</h3>
+    <div id="processedResult"></div>
+  </div>
+</div>
 
 <script>
   const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
   const FETCH_TIMEOUT = 80000;
   const form = document.getElementById('reportForm');
-  const outputDiv = document.getElementById('output');
-
-  const safeCreateLink = (url) => {
-    const container = document.createElement('div');
-    const link = document.createElement('a');
-    link.href = encodeURI(url);
-    link.textContent = 'View Report';
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    container.append('Your report is ready! ', link);
-    return container;
-  };
+  const rawResponsePre = document.getElementById('rawResponse');
+  const processedResultDiv = document.getElementById('processedResult');
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    outputDiv.replaceChildren();
-    outputDiv.className = '';
     
+    // Clear previous results
+    rawResponsePre.textContent = 'Loading...';
+    processedResultDiv.innerHTML = '';
+    processedResultDiv.className = '';
+
     const studentId = document.getElementById('studentId').value.trim();
     if (!/^\d+$/.test(studentId)) {
-      outputDiv.className = 'error';
-      outputDiv.textContent = 'Invalid Student ID - numbers only';
+      showError('Invalid Student ID - numbers only');
       return;
     }
-
-    outputDiv.textContent = 'Generating report...';
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
@@ -106,36 +91,49 @@
 
       clearTimeout(timeoutId);
 
-      // Check for JSON response
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        throw new Error('Invalid response format');
+      // Capture raw response text
+      const rawText = await response.text();
+      rawResponsePre.textContent = rawText;
+
+      // Try to parse JSON
+      try {
+        const data = JSON.parse(rawText);
+        processedResultDiv.innerHTML = formatResponse(data);
+        
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP Error ${response.status}`);
+        }
+        
+        if (data.reportUrl) {
+          processedResultDiv.className = 'success';
+          processedResultDiv.innerHTML += createLink(data.reportUrl);
+        }
+      } catch (e) {
+        processedResultDiv.textContent = `JSON Parse Error: ${e.message}`;
       }
-
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error || `Server error: ${response.status}`);
-      }
-
-      if (!data.reportUrl) {
-        throw new Error('Report URL missing in response');
-      }
-
-      // Safe HTML insertion
-      outputDiv.className = 'success';
-      outputDiv.appendChild(safeCreateLink(data.reportUrl));
 
     } catch (error) {
-      console.error('Error:', error);
-      outputDiv.className = 'error';
-      outputDiv.textContent = error.name === 'AbortError' 
-        ? 'Request timed out. Please try again later.' 
-        : error.message.startsWith('Server error') 
-          ? 'Server unavailable. Please try later.'
-          : error.message || 'Failed to generate report. Check ID and try again.';
+      rawResponsePre.textContent = error.toString();
+      processedResultDiv.className = 'error';
+      processedResultDiv.textContent = error.message;
     }
   });
+
+  function formatResponse(data) {
+    return JSON.stringify(data, null, 2)
+      .replace(/ /g, '&nbsp;')
+      .replace(/\n/g, '<br>');
+  }
+
+  function createLink(url) {
+    return `<br><a href="${encodeURI(url)}" target="_blank" rel="noopener">View Report</a>`;
+  }
+
+  function showError(message) {
+    rawResponsePre.textContent = 'Client-side validation failed';
+    processedResultDiv.className = 'error';
+    processedResultDiv.textContent = message;
+  }
 </script>
 
 </body>
