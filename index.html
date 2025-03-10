@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Student Report Generator</title>
   <style>
+    /* Previous styles remain the same */
     body {
       font-family: Arial, sans-serif;
       max-width: 600px;
@@ -51,9 +52,10 @@
     type="text" 
     id="studentId" 
     name="studentId" 
-    required 
-    pattern="\d+" 
+    required
+    pattern="\d+"
     title="Numbers only, please."
+    inputmode="numeric"
   />
   <button type="submit">Generate Report</button>
 </form>
@@ -61,33 +63,40 @@
 <div id="output"></div>
 
 <script>
-  // Update this to your actual Flow's HTTP POST trigger URL
   const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
-
-  // We'll set a longer timeout (80 seconds = 80000 ms).
   const FETCH_TIMEOUT = 80000;
-
-  // Grab references
   const form = document.getElementById('reportForm');
   const outputDiv = document.getElementById('output');
 
+  const safeCreateLink = (url) => {
+    const container = document.createElement('div');
+    const link = document.createElement('a');
+    link.href = encodeURI(url);
+    link.textContent = 'View Report';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    container.append('Your report is ready! ', link);
+    return container;
+  };
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    
-    // Clear old messages
+    outputDiv.replaceChildren();
     outputDiv.className = '';
-    outputDiv.textContent = 'Loading...';
+    
+    const studentId = document.getElementById('studentId').value.trim();
+    if (!/^\d+$/.test(studentId)) {
+      outputDiv.className = 'error';
+      outputDiv.textContent = 'Invalid Student ID - numbers only';
+      return;
+    }
 
-    // Read the student ID
-    const studentIdInput = document.getElementById('studentId');
-    const studentId = studentIdInput.value.trim();
+    outputDiv.textContent = 'Generating report...';
 
-    // Prepare a controller to handle request timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
     try {
-      // Make the POST request to the Flow
       const response = await fetch(FLOW_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,34 +106,34 @@
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        throw new Error(`Server responded with status ${response.status}`);
+      // Check for JSON response
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new Error('Invalid response format');
       }
 
-      // Parse JSON
       const data = await response.json();
 
-      // Check if reportUrl is present
-      if (!data?.reportUrl) {
-        throw new Error('Response JSON did not contain reportUrl');
+      if (!response.ok || data.error) {
+        throw new Error(data.error || `Server error: ${response.status}`);
       }
 
-      // Show success
+      if (!data.reportUrl) {
+        throw new Error('Report URL missing in response');
+      }
+
+      // Safe HTML insertion
       outputDiv.className = 'success';
-      outputDiv.innerHTML = `
-        <strong>Your report is ready!</strong><br>
-        <a href="${data.reportUrl}" target="_blank">View Report</a>
-      `;
+      outputDiv.appendChild(safeCreateLink(data.reportUrl));
+
     } catch (error) {
       console.error('Error:', error);
-      let msg;
-      if (error.name === 'AbortError') {
-        msg = 'Request timed out. Please try again later.';
-      } else {
-        msg = 'Failed to generate report. Please check your input or try again.';
-      }
       outputDiv.className = 'error';
-      outputDiv.textContent = msg;
+      outputDiv.textContent = error.name === 'AbortError' 
+        ? 'Request timed out. Please try again later.' 
+        : error.message.startsWith('Server error') 
+          ? 'Server unavailable. Please try later.'
+          : error.message || 'Failed to generate report. Check ID and try again.';
     }
   });
 </script>
