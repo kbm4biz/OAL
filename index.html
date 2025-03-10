@@ -127,6 +127,8 @@
       fetch(flowUrl + '?studentId=' + encodeURIComponent(studentId))
         .then(function(response) {
           if (!response.ok) {
+            // Log detailed HTTP error info for debugging
+            console.error('HTTP error:', response.status, response.statusText);
             throw new Error('Network response was not ok');
           }
           return response.text();
@@ -138,6 +140,7 @@
           document.getElementById('response-container').style.display = 'block';
         })
         .catch(function(error) {
+          console.error('Fetch error:', error);
           document.getElementById('loading-container').style.display = 'none';
           document.getElementById('response-content').innerHTML = 'Error: ' + error.message;
           document.getElementById('response-container').style.display = 'block';
