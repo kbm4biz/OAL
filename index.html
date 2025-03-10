@@ -112,6 +112,7 @@
     // Listen for form submission
     document.getElementById('student-form').addEventListener('submit', function(e) {
       e.preventDefault();
+      
       // Hide the form container and show the loading container
       document.getElementById('form-container').style.display = 'none';
       document.getElementById('response-container').style.display = 'none';
@@ -123,28 +124,37 @@
       // Replace with your actual Power Automate Flow endpoint URL
       var flowUrl = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
 
-      // Trigger the flow via fetch (GET request with studentId as a query parameter)
-      fetch(flowUrl + '?studentId=' + encodeURIComponent(studentId))
-        .then(function(response) {
-          if (!response.ok) {
-            // Log detailed HTTP error info for debugging
-            console.error('HTTP error:', response.status, response.statusText);
-            throw new Error('Network response was not ok');
-          }
-          return response.text();
-        })
-        .then(function(data) {
-          // Hide the loading container and display the response
-          document.getElementById('loading-container').style.display = 'none';
-          document.getElementById('response-content').innerHTML = data;
-          document.getElementById('response-container').style.display = 'block';
-        })
-        .catch(function(error) {
-          console.error('Fetch error:', error);
-          document.getElementById('loading-container').style.display = 'none';
-          document.getElementById('response-content').innerHTML = 'Error: ' + error.message;
-          document.getElementById('response-container').style.display = 'block';
-        });
+      // Create the JSON payload with the studentId
+      var payload = { studentId: studentId };
+
+      // Trigger the flow using a POST request with JSON body
+      fetch(flowUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(function(response) {
+        if (!response.ok) {
+          console.error('HTTP error:', response.status, response.statusText);
+          throw new Error('Network response was not ok');
+        }
+        // You can parse as JSON if your response is JSON:
+        return response.text(); // or response.json() if applicable
+      })
+      .then(function(data) {
+        // Hide the loading container and display the response
+        document.getElementById('loading-container').style.display = 'none';
+        document.getElementById('response-content').innerHTML = data;
+        document.getElementById('response-container').style.display = 'block';
+      })
+      .catch(function(error) {
+        console.error('Fetch error:', error);
+        document.getElementById('loading-container').style.display = 'none';
+        document.getElementById('response-content').innerHTML = 'Error: ' + error.message;
+        document.getElementById('response-container').style.display = 'block';
+      });
     });
 
     // Allow the user to go back to the form from the response page
