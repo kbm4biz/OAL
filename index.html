@@ -27,6 +27,8 @@
       white-space: pre-wrap;
       word-wrap: break-word;
     }
+    .success { color: #2e7d32; }
+    .error { color: #c62828; }
   </style>
 </head>
 <body>
@@ -52,25 +54,25 @@
     <pre id="rawResponse"></pre>
   </div>
   <div class="response-section">
-    <h3>Formatted Result:</h3>
+    <h3>Status:</h3>
     <div id="processedResult"></div>
   </div>
 </div>
 
 <script>
   const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
-  const FETCH_TIMEOUT = 80000;
+  const POLL_INTERVAL = 2000; // 2 seconds
   const form = document.getElementById('reportForm');
   const rawResponsePre = document.getElementById('rawResponse');
-  const processedResultDiv = document.getElementById('processedResult');
+  const resultDiv = document.getElementById('processedResult');
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     
-    // Clear previous results
-    rawResponsePre.textContent = 'Loading...';
-    processedResultDiv.innerHTML = '';
-    processedResultDiv.className = '';
+    // Reset UI
+    rawResponsePre.textContent = '';
+    resultDiv.innerHTML = 'Starting...';
+    resultDiv.className = '';
 
     const studentId = document.getElementById('studentId').value.trim();
     if (!/^\d+$/.test(studentId)) {
@@ -78,61 +80,92 @@
       return;
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-
     try {
-      const response = await fetch(FLOW_URL, {
+      // Initial request
+      const initResponse = await fetch(FLOW_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId }),
-        signal: controller.signal
+        body: JSON.stringify({ studentId })
       });
 
-      clearTimeout(timeoutId);
-
-      // Capture raw response text
-      const rawText = await response.text();
-      rawResponsePre.textContent = rawText;
-
-      // Try to parse JSON
-      try {
-        const data = JSON.parse(rawText);
-        processedResultDiv.innerHTML = formatResponse(data);
-        
-        if (!response.ok) {
-          throw new Error(data.error || `HTTP Error ${response.status}`);
-        }
-        
-        if (data.reportUrl) {
-          processedResultDiv.className = 'success';
-          processedResultDiv.innerHTML += createLink(data.reportUrl);
-        }
-      } catch (e) {
-        processedResultDiv.textContent = `JSON Parse Error: ${e.message}`;
+      // Handle 202 Accepted for async processing
+      if (initResponse.status === 202) {
+        const data = await initResponse.json();
+        rawResponsePre.textContent = JSON.stringify(data, null, 2);
+        await pollStatus(data.statusQueryUrl || data.properties.statusQueryUrl);
+      } else {
+        handleFinalResponse(await initResponse.json());
       }
-
+      
     } catch (error) {
-      rawResponsePre.textContent = error.toString();
-      processedResultDiv.className = 'error';
-      processedResultDiv.textContent = error.message;
+      showError(`Request failed: ${error.message}`);
     }
   });
 
-  function formatResponse(data) {
-    return JSON.stringify(data, null, 2)
-      .replace(/ /g, '&nbsp;')
-      .replace(/\n/g, '<br>');
+  async function pollStatus(statusUrl) {
+    try {
+      let attempts = 0;
+      const maxAttempts = 30; // 60 seconds total
+
+      while (attempts < maxAttempts) {
+        const response = await fetch(statusUrl);
+        const data = await response.json();
+        rawResponsePre.textContent = JSON.stringify(data, null, 2);
+        
+        updateStatusMessage(`Checking status (${attempts + 1}/${maxAttempts})...`);
+
+        if (data.properties?.status === 'Succeeded') {
+          if (data.properties.outputs?.body?.reportUrl) {
+            handleSuccess(data.properties.outputs.body.reportUrl);
+            return;
+          }
+          handleFinalResponse(data);
+          return;
+        }
+
+        if (data.properties?.status === 'Failed') {
+          throw new Error('Report generation failed on server');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+        attempts++;
+      }
+
+      throw new Error('Timeout waiting for report');
+
+    } catch (error) {
+      showError(`Polling failed: ${error.message}`);
+    }
   }
 
-  function createLink(url) {
-    return `<br><a href="${encodeURI(url)}" target="_blank" rel="noopener">View Report</a>`;
+  function handleFinalResponse(data) {
+    if (data.reportUrl) {
+      handleSuccess(data.reportUrl);
+    } else if (data.error) {
+      throw new Error(data.error);
+    } else {
+      throw new Error('Unexpected response format');
+    }
+  }
+
+  function handleSuccess(url) {
+    resultDiv.className = 'success';
+    resultDiv.innerHTML = `
+      Report generated successfully!<br>
+      <a href="${encodeURI(url)}" target="_blank" rel="noopener">
+        View Report
+      </a>
+    `;
+  }
+
+  function updateStatusMessage(message) {
+    resultDiv.textContent = message;
   }
 
   function showError(message) {
-    rawResponsePre.textContent = 'Client-side validation failed';
-    processedResultDiv.className = 'error';
-    processedResultDiv.textContent = message;
+    resultDiv.className = 'error';
+    resultDiv.textContent = message;
+    console.error(message);
   }
 </script>
 
