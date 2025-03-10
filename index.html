@@ -15,7 +15,6 @@
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      position: relative;
     }
     .container {
       width: 90%;
@@ -23,10 +22,9 @@
       background: white;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       text-align: center;
       position: relative;
-      overflow: hidden;
     }
     input[type="text"] {
       width: 100%;
@@ -49,7 +47,7 @@
     button:hover {
       background-color: #1976d2;
     }
-    /* Initially hide the loading and response containers */
+    /* Hide loading and response containers initially */
     #loading-container, #response-container {
       display: none;
     }
@@ -62,20 +60,12 @@
       opacity: 0;
     }
     @keyframes floatUp {
-      0% {
-        transform: translateY(0);
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(-100px);
-        opacity: 0;
-      }
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-100px); opacity: 0; }
     }
-    /* Responsive design for mobile devices */
+    /* Responsive design */
     @media (max-width: 480px) {
-      .container {
-        width: 95%;
-      }
+      .container { width: 95%; }
     }
   </style>
 </head>
@@ -93,7 +83,6 @@
   <div class="container" id="loading-container">
     <h2>Report Generating in Progress</h2>
     <p>Please wait...</p>
-    <!-- Floating emojis -->
     <div id="emoji-container">
       <span class="floating-emoji" style="left:20%;">🎓</span>
       <span class="floating-emoji" style="left:50%; animation-delay: 0.5s;">🚀</span>
@@ -109,28 +98,23 @@
   </div>
 
   <script>
-    // Listen for form submission
     document.getElementById('student-form').addEventListener('submit', function(e) {
       e.preventDefault();
-      // Hide the form and response containers, show the loading container
+
+      // Hide form and response, show loading screen
       document.getElementById('form-container').style.display = 'none';
       document.getElementById('response-container').style.display = 'none';
       document.getElementById('loading-container').style.display = 'block';
 
-      // Get the student ID entered by the user
       var studentId = document.getElementById('studentId').value;
-      // Prepare the JSON payload
       var payload = { studentId: studentId };
 
       // Replace with your actual Power Automate Flow endpoint URL
       var flowUrl = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
 
-      // Trigger the flow using a POST request with a JSON body
       fetch(flowUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
       .then(function(response) {
@@ -138,15 +122,19 @@
           console.error('HTTP error:', response.status, response.statusText);
           throw new Error('Network response was not ok');
         }
-        // Parse the response as JSON (ensure your flow returns JSON)
-        return response.json();
+        return response.json(); // Ensure your flow returns JSON
       })
       .then(function(data) {
-        // Hide the loading container and display the custom response
+        console.log("Flow response data:", data);
+        // Extract the reportUrl property from the response
+        var reportUrl = data.reportUrl;
+        if (!reportUrl) {
+          throw new Error('Report URL not found in the response.');
+        }
+        // Hide loading and show response with the link
         document.getElementById('loading-container').style.display = 'none';
-        // Display the report URL returned from the flow
-        document.getElementById('response-content').innerHTML = 
-          'Report generated successfully. <a href="' + data.reportUrl + '" target="_blank">View Report</a>';
+        document.getElementById('response-content').innerHTML =
+          'Report generated successfully. <a href="' + reportUrl + '" target="_blank">View Report</a>';
         document.getElementById('response-container').style.display = 'block';
       })
       .catch(function(error) {
@@ -157,7 +145,6 @@
       });
     });
 
-    // Allow the user to go back to the form from the response page
     document.getElementById('back-button').addEventListener('click', function() {
       document.getElementById('response-container').style.display = 'none';
       document.getElementById('form-container').style.display = 'block';
