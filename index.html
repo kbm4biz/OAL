@@ -111,8 +111,8 @@
     // Replace this with the actual URL of your Flow's HTTP POST trigger
     const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
 
-    // Time limit for fetch (in ms)
-    const FETCH_TIMEOUT = 40000; // 40 seconds
+    // Time limit for fetch (in ms) - now doubled to 80 seconds
+    const FETCH_TIMEOUT = 80000; // 80,000 ms = 80 seconds
 
     const containers = {
       form: document.getElementById('form-container'),
