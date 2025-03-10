@@ -8,7 +8,7 @@
     /* General styling and blue color scheme */
     body {
       font-family: Arial, sans-serif;
-      background: #e3f2fd; /* light blue background */
+      background: #e3f2fd;
       margin: 0;
       padding: 0;
       display: flex;
@@ -39,7 +39,7 @@
     button {
       width: 100%;
       padding: 10px;
-      background-color: #2196f3; /* blue button */
+      background-color: #2196f3;
       border: none;
       border-radius: 4px;
       color: white;
@@ -112,22 +112,20 @@
     // Listen for form submission
     document.getElementById('student-form').addEventListener('submit', function(e) {
       e.preventDefault();
-      
-      // Hide the form container and show the loading container
+      // Hide the form and response containers, show the loading container
       document.getElementById('form-container').style.display = 'none';
       document.getElementById('response-container').style.display = 'none';
       document.getElementById('loading-container').style.display = 'block';
 
       // Get the student ID entered by the user
       var studentId = document.getElementById('studentId').value;
+      // Prepare the JSON payload
+      var payload = { studentId: studentId };
 
       // Replace with your actual Power Automate Flow endpoint URL
       var flowUrl = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
 
-      // Create the JSON payload with the studentId
-      var payload = { studentId: studentId };
-
-      // Trigger the flow using a POST request with JSON body
+      // Trigger the flow using a POST request with a JSON body
       fetch(flowUrl, {
         method: 'POST',
         headers: {
@@ -140,19 +138,21 @@
           console.error('HTTP error:', response.status, response.statusText);
           throw new Error('Network response was not ok');
         }
-        // You can parse as JSON if your response is JSON:
-        return response.text(); // or response.json() if applicable
+        // Parse the response as JSON (ensure your flow returns JSON)
+        return response.json();
       })
       .then(function(data) {
-        // Hide the loading container and display the response
+        // Hide the loading container and display the custom response
         document.getElementById('loading-container').style.display = 'none';
-        document.getElementById('response-content').innerHTML = data;
+        // Display the report URL returned from the flow
+        document.getElementById('response-content').innerHTML = 
+          'Report generated successfully. <a href="' + data.reportUrl + '" target="_blank">View Report</a>';
         document.getElementById('response-container').style.display = 'block';
       })
       .catch(function(error) {
         console.error('Fetch error:', error);
         document.getElementById('loading-container').style.display = 'none';
-        document.getElementById('response-content').innerHTML = 'Error: ' + error.message;
+        document.getElementById('response-content').innerText = 'Error: ' + error.message;
         document.getElementById('response-container').style.display = 'block';
       });
     });
