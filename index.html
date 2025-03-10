@@ -126,16 +126,17 @@
       })
       .then(function(data) {
         console.log("Flow response data:", data);
-        // Extract the reportUrl property from the response
         var reportUrl = data.reportUrl;
         if (!reportUrl) {
           throw new Error('Report URL not found in the response.');
         }
-        // Hide loading and show response with the link
-        document.getElementById('loading-container').style.display = 'none';
-        document.getElementById('response-content').innerHTML =
-          'Report generated successfully. <a href="' + reportUrl + '" target="_blank">View Report</a>';
-        document.getElementById('response-container').style.display = 'block';
+        // Introduce a 5-second delay before displaying the result
+        setTimeout(function() {
+          document.getElementById('loading-container').style.display = 'none';
+          document.getElementById('response-content').innerHTML =
+            'Report generated successfully. <a href="' + reportUrl + '" target="_blank">View Report</a>';
+          document.getElementById('response-container').style.display = 'block';
+        }, 5000); // Delay in milliseconds (5000ms = 5 seconds)
       })
       .catch(function(error) {
         console.error('Fetch error:', error);
