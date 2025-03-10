@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Report Generator</title>
+  <style>
+    /* General styling and blue color scheme */
+    body {
+      font-family: Arial, sans-serif;
+      background: #e3f2fd; /* light blue background */
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      position: relative;
+    }
+    .container {
+      width: 90%;
+      max-width: 400px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #2196f3; /* blue button */
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1976d2;
+    }
+    /* Initially hide the loading and response containers */
+    #loading-container, #response-container {
+      display: none;
+    }
+    /* Floating emojis */
+    .floating-emoji {
+      position: absolute;
+      bottom: 10%;
+      font-size: 2rem;
+      animation: floatUp 3s infinite;
+      opacity: 0;
+    }
+    @keyframes floatUp {
+      0% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100px);
+        opacity: 0;
+      }
+    }
+    /* Responsive design for mobile devices */
+    @media (max-width: 480px) {
+      .container {
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Form container -->
+  <div class="container" id="form-container">
+    <h2>Student Report Generator</h2>
+    <form id="student-form">
+      <input type="text" id="studentId" name="studentId" placeholder="Enter Student ID" required />
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+
+  <!-- Loading container -->
+  <div class="container" id="loading-container">
+    <h2>Report Generating in Progress</h2>
+    <p>Please wait...</p>
+    <!-- Floating emojis -->
+    <div id="emoji-container">
+      <span class="floating-emoji" style="left:20%;">🎓</span>
+      <span class="floating-emoji" style="left:50%; animation-delay: 0.5s;">🚀</span>
+      <span class="floating-emoji" style="left:80%; animation-delay: 1s;">📚</span>
+    </div>
+  </div>
+
+  <!-- Response container -->
+  <div class="container" id="response-container">
+    <h2>Report</h2>
+    <div id="response-content"></div>
+    <button id="back-button">Back</button>
+  </div>
+
+  <script>
+    // Listen for form submission
+    document.getElementById('student-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      // Hide the form container and show the loading container
+      document.getElementById('form-container').style.display = 'none';
+      document.getElementById('response-container').style.display = 'none';
+      document.getElementById('loading-container').style.display = 'block';
+
+      // Get the student ID entered by the user
+      var studentId = document.getElementById('studentId').value;
+
+      // Replace with your actual Power Automate Flow endpoint URL
+      var flowUrl = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
+
+      // Trigger the flow via fetch (GET request with studentId as a query parameter)
+      fetch(flowUrl + '?studentId=' + encodeURIComponent(studentId))
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.text();
+        })
+        .then(function(data) {
+          // Hide the loading container and display the response
+          document.getElementById('loading-container').style.display = 'none';
+          document.getElementById('response-content').innerHTML = data;
+          document.getElementById('response-container').style.display = 'block';
+        })
+        .catch(function(error) {
+          document.getElementById('loading-container').style.display = 'none';
+          document.getElementById('response-content').innerHTML = 'Error: ' + error.message;
+          document.getElementById('response-container').style.display = 'block';
+        });
+    });
+
+    // Allow the user to go back to the form from the response page
+    document.getElementById('back-button').addEventListener('click', function() {
+      document.getElementById('response-container').style.display = 'none';
+      document.getElementById('form-container').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
