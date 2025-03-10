@@ -2,203 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Report Generator</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #e3f2fd;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 20px;
     }
-    .container {
-      width: 90%;
-      max-width: 400px;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      text-align: center;
-      position: relative;
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
     }
     input[type="text"] {
       width: 100%;
-      padding: 10px;
-      margin: 15px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1em;
+      padding: 8px;
+      margin-bottom: 12px;
+      box-sizing: border-box;
     }
     button {
-      width: 100%;
-      padding: 10px;
-      background-color: #2196f3;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      font-size: 1em;
+      padding: 10px 15px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #1976d2;
+    #output {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-height: 50px;
     }
-    #loading-container, #response-container {
-      display: none;
+    .success {
+      background-color: #e8f5e9;
+      border-color: #c8e6c9;
     }
-    .report-link {
-      display: block;
-      margin: 20px 0;
-      color: #2196f3;
-      text-decoration: none;
-      word-break: break-all;
-    }
-    .report-link:hover {
-      text-decoration: underline;
-    }
-    .loader {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #2196f3;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      margin: 20px auto;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #loading-message {
-      color: #666;
-      margin: 15px 0;
+    .error {
+      background-color: #ffebee;
+      border-color: #ffcdd2;
     }
   </style>
 </head>
 <body>
-  <div class="container" id="form-container">
-    <h2>Student Report Generator</h2>
-    <form id="student-form">
-      <input 
-        type="text" 
-        id="studentId" 
-        name="studentId"
-        placeholder="Enter Student ID" 
-        required
-        pattern="\d+" 
-        title="Please enter numbers only"
-      >
-      <button type="submit">Generate Report</button>
-    </form>
-  </div>
 
-  <div class="container" id="loading-container">
-    <h2>Processing Your Request</h2>
-    <p id="loading-message">Starting report generation...</p>
-    <div class="loader"></div>
-  </div>
+<h1>Generate Student Report</h1>
+<form id="reportForm">
+  <label for="studentId">Student ID:</label>
+  <input 
+    type="text" 
+    id="studentId" 
+    name="studentId" 
+    required 
+    pattern="\d+" 
+    title="Numbers only, please."
+  />
+  <button type="submit">Generate Report</button>
+</form>
 
-  <div class="container" id="response-container">
-    <h2>Report Ready</h2>
-    <div id="response-content"></div>
-    <button onclick="showForm()">New Report</button>
-  </div>
+<div id="output"></div>
 
-  <script>
-    // Replace this with the actual URL of your Flow's HTTP POST trigger
-    const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
+<script>
+  // Update this to your actual Flow's HTTP POST trigger URL
+  const FLOW_URL = 'https://prod-208.westeurope.logic.azure.com:443/workflows/8229f59b7cca41a0b08627bdf2295a0a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=IAkb9M6kQOlJxtbx-tlELeVQkWKAE8rbh0QwjUXSQlU';
 
-    // Time limit for fetch (in ms) - now doubled to 80 seconds
-    const FETCH_TIMEOUT = 80000; // 80,000 ms = 80 seconds
+  // We'll set a longer timeout (80 seconds = 80000 ms).
+  const FETCH_TIMEOUT = 80000;
 
-    const containers = {
-      form: document.getElementById('form-container'),
-      loading: document.getElementById('loading-container'),
-      response: document.getElementById('response-container')
-    };
-    const responseContent = document.getElementById('response-content');
-    const loadingMessage = document.getElementById('loading-message');
-    const form = document.getElementById('student-form');
+  // Grab references
+  const form = document.getElementById('reportForm');
+  const outputDiv = document.getElementById('output');
 
-    let startTime;
-    let loadingInterval;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    // Clear old messages
+    outputDiv.className = '';
+    outputDiv.textContent = 'Loading...';
 
-    function showForm() {
-      containers.response.style.display = 'none';
-      containers.form.style.display = 'block';
-      form.reset();
-    }
+    // Read the student ID
+    const studentIdInput = document.getElementById('studentId');
+    const studentId = studentIdInput.value.trim();
 
-    function updateLoadingMessage() {
-      const seconds = Math.floor((Date.now() - startTime) / 1000);
-      loadingMessage.textContent = `Processing... (${seconds}s elapsed)`;
-    }
+    // Prepare a controller to handle request timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
-    async function handleFormSubmit(e) {
-      e.preventDefault();
-      const studentId = document.getElementById('studentId').value.trim();
+    try {
+      // Make the POST request to the Flow
+      const response = await fetch(FLOW_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId }),
+        signal: controller.signal
+      });
 
-      // Hide form and response, show loading
-      containers.form.style.display = 'none';
-      containers.response.style.display = 'none';
-      containers.loading.style.display = 'block';
-      responseContent.innerHTML = '';
+      clearTimeout(timeoutId);
 
-      // Reset timing
-      startTime = Date.now();
-      loadingInterval = setInterval(updateLoadingMessage, 1000);
-      updateLoadingMessage();
-
-      // Prepare fetch timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
-
-      try {
-        const response = await fetch(FLOW_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentId }),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`Server responded with ${response.status}`);
-        }
-
-        // Attempt to parse JSON from response
-        const data = await response.json();
-
-        // Ensure the response has the 'reportUrl' property
-        if (!data?.reportUrl) {
-          throw new Error('Invalid response format from server');
-        }
-
-        // Create a link for the user
-        responseContent.innerHTML = `
-          <p>Your report is ready!</p>
-          <a href="${data.reportUrl}" class="report-link" target="_blank">
-            View Report
-          </a>
-        `;
-      } catch (error) {
-        console.error('Error:', error);
-        const errorMessage = error.name === 'AbortError'
-          ? 'Request timed out. Please try again.'
-          : 'Failed to generate report. Please try again.';
-        responseContent.textContent = errorMessage;
-      } finally {
-        clearInterval(loadingInterval);
-        containers.loading.style.display = 'none';
-        containers.response.style.display = 'block';
+      if (!response.ok) {
+        throw new Error(`Server responded with status ${response.status}`);
       }
-    }
 
-    form.addEventListener('submit', handleFormSubmit);
-  </script>
+      // Parse JSON
+      const data = await response.json();
+
+      // Check if reportUrl is present
+      if (!data?.reportUrl) {
+        throw new Error('Response JSON did not contain reportUrl');
+      }
+
+      // Show success
+      outputDiv.className = 'success';
+      outputDiv.innerHTML = `
+        <strong>Your report is ready!</strong><br>
+        <a href="${data.reportUrl}" target="_blank">View Report</a>
+      `;
+    } catch (error) {
+      console.error('Error:', error);
+      let msg;
+      if (error.name === 'AbortError') {
+        msg = 'Request timed out. Please try again later.';
+      } else {
+        msg = 'Failed to generate report. Please check your input or try again.';
+      }
+      outputDiv.className = 'error';
+      outputDiv.textContent = msg;
+    }
+  });
+</script>
+
 </body>
 </html>
