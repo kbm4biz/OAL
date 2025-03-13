@@ -1,173 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Report Generator</title>
   <style>
+    :root {
+      --primary: #2196F3;
+      --success: #4CAF50;
+      --error: #f44336;
+      --warning: #ff9800;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', system-ui, sans-serif;
       max-width: 800px;
-      margin: 40px auto;
-      padding: 0 20px;
+      margin: 2rem auto;
+      padding: 0 1rem;
     }
-    #output {
-      margin-top: 20px;
-      padding: 15px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background-color: #f8f9fa;
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 2rem;
+      margin: 1rem 0;
     }
-    .response-section {
-      margin: 10px 0;
-      padding: 10px;
-      background-color: white;
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem;
       border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
     }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: opacity 0.2s;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .response-container {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .status {
+      padding: 1rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+    }
+
+    .status.success { background: color-mix(in srgb, var(--success) 10%); }
+    .status.error { background: color-mix(in srgb, var(--error) 10%); }
+    .status.warning { background: color-mix(in srgb, var(--warning) 10%); }
+
     pre {
-      white-space: pre-wrap;
-      word-wrap: break-word;
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
     }
-    .success { color: #2e7d32; }
-    .error { color: #c62828; }
   </style>
 </head>
 <body>
+  <div class="card">
+    <h1>Generate Student Report</h1>
+    
+    <form id="reportForm">
+      <div class="form-group">
+        <label for="studentId">Student ID</label>
+        <input 
+          type="text" 
+          id="studentId" 
+          name="studentId"
+          required
+          pattern="\d+"
+          inputmode="numeric"
+          placeholder="Enter numeric student ID"
+        >
+      </div>
+      
+      <button type="submit" id="submitBtn">
+        Generate Report
+      </button>
+    </form>
 
-<h1>Generate Student Report</h1>
-<form id="reportForm">
-  <label for="studentId">Student ID:</label>
-  <input 
-    type="text" 
-    id="studentId" 
-    name="studentId" 
-    required
-    pattern="\d+"
-    title="Numbers only, please."
-    inputmode="numeric"
-  />
-  <button type="submit">Generate Report</button>
-</form>
-
-<div id="output">
-  <div class="response-section">
-    <h3>Raw Response:</h3>
-    <pre id="rawResponse"></pre>
+    <div class="response-container" id="responseContainer">
+      <div class="status" id="statusMessage"></div>
+      
+      <h3>API Response</h3>
+      <pre id="apiResponse"></pre>
+      
+      <div id="resultContainer"></div>
+    </div>
   </div>
-  <div class="response-section">
-    <h3>Status:</h3>
-    <div id="processedResult"></div>
-  </div>
-</div>
 
 <script>
-  const FLOW_URL = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
-  const POLL_INTERVAL = 2000; // 2 seconds
-  const form = document.getElementById('reportForm');
-  const rawResponsePre = document.getElementById('rawResponse');
-  const resultDiv = document.getElementById('processedResult');
+  const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
+  const POLL_INTERVAL = 1500; // 1.5 seconds
+  const MAX_POLL_ATTEMPTS = 40; // 60 seconds total
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    
-    // Reset UI
-    rawResponsePre.textContent = '';
-    resultDiv.innerHTML = 'Starting...';
-    resultDiv.className = '';
+  const form = document.getElementById('reportForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const responseContainer = document.getElementById('responseContainer');
+  const statusMessage = document.getElementById('statusMessage');
+  const apiResponsePre = document.getElementById('apiResponse');
+  const resultContainer = document.getElementById('resultContainer');
+
+  form.addEventListener('submit', handleFormSubmit);
+
+  async function handleFormSubmit(e) {
+    e.preventDefault();
+    if (submitBtn.disabled) return;
+
+    // Reset UI state
+    resetUI();
+    submitBtn.disabled = true;
+    responseContainer.style.display = 'block';
 
     const studentId = document.getElementById('studentId').value.trim();
-    if (!/^\d+$/.test(studentId)) {
-      showError('Invalid Student ID - numbers only');
-      return;
-    }
 
     try {
-      // Initial request
-      const initResponse = await fetch(FLOW_URL, {
+      // Validate input
+      if (!/^\d+$/.test(studentId)) {
+        throw new Error('Invalid Student ID - must contain only numbers');
+      }
+
+      // Initiate report generation
+      const response = await fetch(FLOW_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId })
       });
 
-      // Handle 202 Accepted for async processing
-      if (initResponse.status === 202) {
-        const data = await initResponse.json();
-        rawResponsePre.textContent = JSON.stringify(data, null, 2);
-        await pollStatus(data.statusQueryUrl || data.properties.statusQueryUrl);
+      // Handle different response statuses
+      if (response.status === 202) {
+        handleAsyncResponse(response);
+      } else if (response.ok) {
+        handleSuccessResponse(await response.json());
       } else {
-        handleFinalResponse(await initResponse.json());
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
     } catch (error) {
-      showError(`Request failed: ${error.message}`);
+      showError(error.message);
+    } finally {
+      submitBtn.disabled = false;
     }
-  });
+  }
 
-  async function pollStatus(statusUrl) {
+  async function handleAsyncResponse(response) {
+    let statusUrl;
+    
     try {
-      let attempts = 0;
-      const maxAttempts = 30; // 60 seconds total
+      // Try to get status URL from headers first
+      statusUrl = response.headers.get('Location');
+      
+      // Fallback to JSON body
+      if (!statusUrl) {
+        const body = await response.json();
+        statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
+      }
 
-      while (attempts < maxAttempts) {
+      if (!statusUrl) {
+        throw new Error('No status URL provided in response');
+      }
+
+      // Start polling
+      await pollReportStatus(statusUrl);
+    } catch (error) {
+      showError(`Failed to process async response: ${error.message}`);
+    }
+  }
+
+  async function pollReportStatus(statusUrl) {
+    let attempts = 0;
+    
+    try {
+      while (attempts < MAX_POLL_ATTEMPTS) {
         const response = await fetch(statusUrl);
         const data = await response.json();
-        rawResponsePre.textContent = JSON.stringify(data, null, 2);
         
-        updateStatusMessage(`Checking status (${attempts + 1}/${maxAttempts})...`);
+        updateUIResponse(data);
+        updateStatus(`Processing report (Attempt ${attempts + 1}/${MAX_POLL_ATTEMPTS})`);
 
-        if (data.properties?.status === 'Succeeded') {
-          if (data.properties.outputs?.body?.reportUrl) {
-            handleSuccess(data.properties.outputs.body.reportUrl);
+        if (data.status === 'Succeeded') {
+          if (data.output?.reportUrl || data.properties?.outputs?.reportUrl) {
+            showReportLink(data.output?.reportUrl || data.properties.outputs.reportUrl);
             return;
           }
-          handleFinalResponse(data);
-          return;
+          throw new Error('Report URL missing in successful response');
         }
 
-        if (data.properties?.status === 'Failed') {
-          throw new Error('Report generation failed on server');
+        if (data.status === 'Failed') {
+          throw new Error(data.error?.message || 'Report generation failed');
         }
 
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
         attempts++;
       }
-
-      throw new Error('Timeout waiting for report');
-
+      
+      throw new Error('Report generation timed out');
     } catch (error) {
-      showError(`Polling failed: ${error.message}`);
+      showError(error.message);
     }
   }
 
-  function handleFinalResponse(data) {
+  function handleSuccessResponse(data) {
     if (data.reportUrl) {
-      handleSuccess(data.reportUrl);
-    } else if (data.error) {
-      throw new Error(data.error);
+      showReportLink(data.reportUrl);
     } else {
-      throw new Error('Unexpected response format');
+      throw new Error('Successful response missing report URL');
     }
   }
 
-  function handleSuccess(url) {
-    resultDiv.className = 'success';
-    resultDiv.innerHTML = `
-      Report generated successfully!<br>
-      <a href="${encodeURI(url)}" target="_blank" rel="noopener">
-        View Report
-      </a>
+  function showReportLink(url) {
+    resultContainer.innerHTML = `
+      <div class="status success">
+        Report generated successfully!<br>
+        <a href="${encodeURI(url)}" target="_blank" rel="noopener">
+          Download PDF Report
+        </a>
+      </div>
     `;
+    updateStatus('Ready', 'success');
   }
 
-  function updateStatusMessage(message) {
-    resultDiv.textContent = message;
+  function updateUIResponse(data) {
+    apiResponsePre.textContent = JSON.stringify(data, null, 2);
+  }
+
+  function updateStatus(message, type = 'warning') {
+    statusMessage.className = `status ${type}`;
+    statusMessage.innerHTML = message;
   }
 
   function showError(message) {
-    resultDiv.className = 'error';
-    resultDiv.textContent = message;
     console.error(message);
+    updateStatus(message, 'error');
+    resultContainer.innerHTML = '';
+  }
+
+  function resetUI() {
+    apiResponsePre.textContent = '';
+    resultContainer.innerHTML = '';
+    statusMessage.className = 'status';
+    statusMessage.innerHTML = '';
   }
 </script>
-
 </body>
 </html>
