@@ -5,273 +5,174 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Report Generator</title>
   <style>
-    :root {
-      --primary: #2196F3;
-      --success: #4CAF50;
-      --error: #f44336;
-      --warning: #ff9800;
-    }
-
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      max-width: 800px;
+      font-family: Arial, sans-serif;
+      max-width: 600px;
       margin: 2rem auto;
-      padding: 0 1rem;
+      padding: 0 20px;
     }
-
-    .card {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      padding: 2rem;
-      margin: 1rem 0;
-    }
-
     .form-group {
       margin-bottom: 1.5rem;
     }
-
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-    }
-
     input {
       width: 100%;
-      padding: 0.75rem;
+      padding: 0.8rem;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 1rem;
-      margin-bottom: 0.5rem;
     }
-
     button {
-      background: var(--primary);
+      background: #2196F3;
       color: white;
       border: none;
-      padding: 0.75rem 1.5rem;
+      padding: 0.8rem 1.5rem;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 1rem;
       transition: opacity 0.2s;
     }
-
     button:disabled {
       background: #ccc;
       cursor: not-allowed;
     }
-
-    .response-container {
+    .result {
       margin-top: 1.5rem;
-      display: none;
-    }
-
-    .status {
       padding: 1rem;
       border-radius: 4px;
-      margin: 1rem 0;
     }
-
-    .status.success { background: color-mix(in srgb, var(--success) 10%); }
-    .status.error { background: color-mix(in srgb, var(--error) 10%); }
-    .status.warning { background: color-mix(in srgb, var(--warning) 10%); }
-
-    pre {
-      background: #f5f5f5;
-      padding: 1rem;
-      border-radius: 4px;
-      overflow-x: auto;
-      display: none;
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
     }
-
-    .report-link {
+    .error {
+      background: #ffebee;
+      color: #c62828;
+    }
+    .pdf-link {
       display: inline-block;
       margin-top: 1rem;
       padding: 12px 24px;
-      background: var(--primary);
-      color: white !important;
+      background: #4CAF50;
+      color: white;
       text-decoration: none;
       border-radius: 4px;
-      transition: opacity 0.2s;
-    }
-
-    .report-link:hover {
-      opacity: 0.9;
-    }
-
-    .toggle-json {
-      background: #666;
-      margin: 1rem 0;
     }
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="container">
     <h1>Generate Student Report</h1>
-    
     <form id="reportForm">
       <div class="form-group">
-        <label for="studentId">Student ID</label>
+        <label for="studentId">Student ID:</label>
         <input 
           type="text" 
           id="studentId" 
-          name="studentId"
           required
           pattern="\d+"
-          inputmode="numeric"
-          placeholder="Enter numeric student ID"
+          placeholder="Enter numeric Student ID"
         >
       </div>
-      
-      <button type="submit" id="submitBtn">
-        Generate Report
-      </button>
+      <button type="submit" id="submitBtn">Generate Report</button>
     </form>
-
-    <div class="response-container" id="responseContainer">
-      <div class="status" id="statusMessage"></div>
-      
-      <button onclick="toggleJsonView()" class="toggle-json">
-        Toggle Raw Response
-      </button>
-      
-      <pre id="apiResponse"></pre>
-      
-      <div id="resultContainer"></div>
-    </div>
+    <div id="resultContainer" class="result"></div>
   </div>
 
 <script>
   const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
-  const POLL_INTERVAL = 1500;
-  const MAX_POLL_ATTEMPTS = 40;
+  const POLL_INTERVAL = 2000; // 2 seconds
+  const MAX_POLL_ATTEMPTS = 30; // 1 minute timeout
 
   const form = document.getElementById('reportForm');
   const submitBtn = document.getElementById('submitBtn');
-  const responseContainer = document.getElementById('responseContainer');
-  const statusMessage = document.getElementById('statusMessage');
-  const apiResponsePre = document.getElementById('apiResponse');
   const resultContainer = document.getElementById('resultContainer');
 
-  form.addEventListener('submit', handleFormSubmit);
-
-  async function handleFormSubmit(e) {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (submitBtn.disabled) return;
-
-    resetUI();
     submitBtn.disabled = true;
-    responseContainer.style.display = 'block';
-
+    resultContainer.innerHTML = '<div class="status">Processing...</div>';
+    
     const studentId = document.getElementById('studentId').value.trim();
 
     try {
-      if (!/^\d+$/.test(studentId)) {
-        throw new Error('Invalid Student ID - must contain only numbers');
-      }
-
-      const response = await fetch(FLOW_ENDPOINT, {
+      // Initial request to trigger the flow
+      const initResponse = await fetch(FLOW_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentId })
       });
 
-      if (response.status === 202) {
-        const { statusQueryGetUri } = await response.json();
-        await pollStatus(statusQueryGetUri);
-      } else if (response.ok) {
-        handleSuccessResponse(await response.json());
+      // Handle async response pattern
+      if (initResponse.status === 202) {
+        const { statusQueryGetUri } = await initResponse.json();
+        await pollForResult(statusQueryGetUri);
       } else {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const finalResult = await handleResponse(initResponse);
+        showPdfLink(finalResult.reportUrl);
       }
     } catch (error) {
-      showError(error.message);
-      apiResponsePre.style.display = 'block';
+      showError(`Error: ${error.message}`);
     } finally {
       submitBtn.disabled = false;
     }
-  }
+  });
 
-  async function pollStatus(statusUrl) {
+  async function pollForResult(statusUrl) {
     let attempts = 0;
     
-    try {
-      while (attempts < MAX_POLL_ATTEMPTS) {
+    while (attempts < MAX_POLL_ATTEMPTS) {
+      try {
         const response = await fetch(statusUrl);
-        const data = await response.json();
-        
-        updateUIResponse(data);
-        updateStatus(`Processing (${attempts + 1}/${MAX_POLL_ATTEMPTS})...`, 'warning');
+        const result = await handleResponse(response);
 
-        if (data.status === 'Succeeded') {
-          if (data.reportUrl) {
-            showReportLink(data.reportUrl);
-            return;
-          }
-          throw new Error('Missing report URL in response');
+        if (result.status === 'Succeeded') {
+          showPdfLink(result.reportUrl);
+          return;
         }
-
-        if (data.status === 'Failed') {
-          throw new Error(data.error || 'Report generation failed');
+        
+        if (result.status === 'Failed') {
+          throw new Error(result.error || 'Report generation failed');
         }
 
         await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
         attempts++;
+      } catch (error) {
+        showError(`Polling failed: ${error.message}`);
+        break;
       }
-      throw new Error('Timeout waiting for report');
-    } catch (error) {
-      showError(error.message);
+    }
+    
+    if (attempts >= MAX_POLL_ATTEMPTS) {
+      showError('Report generation timed out');
     }
   }
 
-  function handleSuccessResponse(data) {
-    if (data.reportUrl) {
-      showReportLink(data.reportUrl);
-    } else {
-      throw new Error('Successful response missing report URL');
+  async function handleResponse(response) {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+    return response.json();
   }
 
-  function showReportLink(url) {
+  function showPdfLink(url) {
     resultContainer.innerHTML = `
-      <a href="${encodeURI(url)}" 
-         class="report-link" 
-         target="_blank" 
-         rel="noopener noreferrer">
-        Download PDF Report
-      </a>
+      <div class="success">
+        Report generated successfully!
+        <a href="${encodeURI(url)}" 
+           class="pdf-link" 
+           target="_blank" 
+           rel="noopener noreferrer">
+          Download PDF Report
+        </a>
+      </div>
     `;
-    updateStatus('Report ready!', 'success');
-  }
-
-  function toggleJsonView() {
-    apiResponsePre.style.display = 
-      apiResponsePre.style.display === 'none' ? 'block' : 'none';
-  }
-
-  function updateUIResponse(data) {
-    apiResponsePre.textContent = JSON.stringify(data, null, 2);
-  }
-
-  function updateStatus(message, type = 'warning') {
-    statusMessage.className = `status ${type}`;
-    statusMessage.textContent = message;
   }
 
   function showError(message) {
-    console.error(message);
-    statusMessage.className = 'status error';
-    statusMessage.textContent = message;
-    apiResponsePre.style.display = 'block';
-  }
-
-  function resetUI() {
-    apiResponsePre.textContent = '';
-    resultContainer.innerHTML = '';
-    statusMessage.className = 'status';
-    statusMessage.textContent = '';
-    apiResponsePre.style.display = 'none';
+    resultContainer.innerHTML = `
+      <div class="error">
+        ${message}
+      </div>
+    `;
   }
 </script>
 </body>
