@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Report Generator</title>
   <style>
     :root {
@@ -17,6 +17,7 @@
       max-width: 800px;
       margin: 2rem auto;
       padding: 0 1rem;
+      background: #fafafa;
     }
 
     .card {
@@ -56,7 +57,6 @@
       font-size: 1rem;
       transition: opacity 0.2s;
     }
-
     button:disabled {
       background: #ccc;
       cursor: not-allowed;
@@ -71,11 +71,18 @@
       padding: 1rem;
       border-radius: 4px;
       margin: 1rem 0;
+      /* Provide fallback background color */
+      background: #fff;
     }
-
-    .status.success { background: color-mix(in srgb, var(--success) 10%); }
-    .status.error { background: color-mix(in srgb, var(--error) 10%); }
-    .status.warning { background: color-mix(in srgb, var(--warning) 10%); }
+    .status.success {
+      background: #e7f8e9; /* fallback for success */
+    }
+    .status.error {
+      background: #fdebec; /* fallback for error */
+    }
+    .status.warning {
+      background: #fff7e5; /* fallback for warning */
+    }
 
     pre {
       background: #f5f5f5;
@@ -118,157 +125,182 @@
     </div>
   </div>
 
-<script>
-  const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
-  const POLL_INTERVAL = 1500; // 1.5 seconds
-  const MAX_POLL_ATTEMPTS = 40; // 60 seconds total
+  <script>
+    // Replace with your Power Automate endpoint:
+    const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
 
-  const form = document.getElementById('reportForm');
-  const submitBtn = document.getElementById('submitBtn');
-  const responseContainer = document.getElementById('responseContainer');
-  const statusMessage = document.getElementById('statusMessage');
-  const apiResponsePre = document.getElementById('apiResponse');
-  const resultContainer = document.getElementById('resultContainer');
+    // Polling interval and maximum attempts
+    const POLL_INTERVAL = 1500; // 1.5 seconds
+    const MAX_POLL_ATTEMPTS = 40; // total ~60 seconds
 
-  form.addEventListener('submit', handleFormSubmit);
+    const form = document.getElementById('reportForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const responseContainer = document.getElementById('responseContainer');
+    const statusMessage = document.getElementById('statusMessage');
+    const apiResponsePre = document.getElementById('apiResponse');
+    const resultContainer = document.getElementById('resultContainer');
 
-  async function handleFormSubmit(e) {
-    e.preventDefault();
-    if (submitBtn.disabled) return;
+    form.addEventListener('submit', handleFormSubmit);
 
-    // Reset UI state
-    resetUI();
-    submitBtn.disabled = true;
-    responseContainer.style.display = 'block';
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      if (submitBtn.disabled) return;
 
-    const studentId = document.getElementById('studentId').value.trim();
+      // Reset UI state
+      resetUI();
+      submitBtn.disabled = true;
+      responseContainer.style.display = 'block';
 
-    try {
-      // Validate input
-      if (!/^\d+$/.test(studentId)) {
-        throw new Error('Invalid Student ID - must contain only numbers');
+      const studentId = document.getElementById('studentId').value.trim();
+
+      try {
+        // Basic numeric validation
+        if (!/^\d+$/.test(studentId)) {
+          throw new Error('Invalid Student ID - must contain only numbers');
+        }
+
+        // Initiate report generation
+        const response = await fetch(FLOW_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId })
+        });
+
+        // Handle different response statuses
+        if (response.status === 202) {
+          // Asynchronous response: poll the status URL
+          handleAsyncResponse(response);
+        } else if (response.ok) {
+          // Synchronous success
+          handleSuccessResponse(await response.json());
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        submitBtn.disabled = false;
       }
-
-      // Initiate report generation
-      const response = await fetch(FLOW_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId })
-      });
-
-      // Handle different response statuses
-      if (response.status === 202) {
-        handleAsyncResponse(response);
-      } else if (response.ok) {
-        handleSuccessResponse(await response.json());
-      } else {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-    } catch (error) {
-      showError(error.message);
-    } finally {
-      submitBtn.disabled = false;
     }
-  }
 
-  async function handleAsyncResponse(response) {
-    let statusUrl;
-    
-    try {
-      // Try to get status URL from headers first
-      statusUrl = response.headers.get('Location');
-      
-      // Fallback to JSON body
-      if (!statusUrl) {
-        const body = await response.json();
-        statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
-      }
-
-      if (!statusUrl) {
-        throw new Error('No status URL provided in response');
-      }
-
-      // Start polling
-      await pollReportStatus(statusUrl);
-    } catch (error) {
-      showError(`Failed to process async response: ${error.message}`);
-    }
-  }
-
-  async function pollReportStatus(statusUrl) {
-    let attempts = 0;
-    
-    try {
-      while (attempts < MAX_POLL_ATTEMPTS) {
-        const response = await fetch(statusUrl);
-        const data = await response.json();
+    // Processes a 202 response by extracting a status URL and polling it
+    async function handleAsyncResponse(response) {
+      let statusUrl;
+      try {
+        // Check 'Location' header first
+        statusUrl = response.headers.get('Location');
         
-        updateUIResponse(data);
-        updateStatus(`Processing report (Attempt ${attempts + 1}/${MAX_POLL_ATTEMPTS})`);
+        // Fallback: parse JSON body for statusQueryGetUri
+        if (!statusUrl) {
+          const body = await response.json();
+          statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
+        }
 
-        if (data.status === 'Succeeded') {
-          if (data.output?.reportUrl || data.properties?.outputs?.reportUrl) {
-            showReportLink(data.output?.reportUrl || data.properties.outputs.reportUrl);
+        if (!statusUrl) {
+          throw new Error('No status URL provided in the async response');
+        }
+
+        // Start polling
+        await pollReportStatus(statusUrl);
+      } catch (error) {
+        showError(`Failed to process async response: ${error.message}`);
+      }
+    }
+
+    // Polls the status URL for progress
+    async function pollReportStatus(statusUrl) {
+      let attempts = 0;
+      try {
+        while (attempts < MAX_POLL_ATTEMPTS) {
+          const response = await fetch(statusUrl);
+          const data = await response.json();
+
+          updateUIResponse(data);
+          updateStatus(`Processing report (Attempt ${attempts + 1}/${MAX_POLL_ATTEMPTS})`);
+
+          // If the flow uses Durable Functions or a similar pattern,
+          // it may return a 'status' property:
+          if (data.status === 'Succeeded') {
+            // Check for the final report URL inside 'output' or 'properties'
+            const finalReportUrl =
+              data?.output?.reportUrl ||
+              data?.properties?.outputs?.reportUrl;
+            
+            if (finalReportUrl) {
+              showReportLink(finalReportUrl);
+              return;
+            }
+            throw new Error('Report URL missing in successful response');
+          }
+
+          // If there's no status, but we directly see a reportUrl
+          // (some flows return { "reportUrl":"..." } without "status")
+          if (data.reportUrl) {
+            showReportLink(data.reportUrl);
             return;
           }
-          throw new Error('Report URL missing in successful response');
-        }
 
-        if (data.status === 'Failed') {
-          throw new Error(data.error?.message || 'Report generation failed');
-        }
+          if (data.status === 'Failed') {
+            throw new Error(data.error?.message || 'Report generation failed');
+          }
 
-        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
-        attempts++;
+          // Wait before next attempt
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+          attempts++;
+        }
+        throw new Error('Report generation timed out');
+      } catch (error) {
+        showError(error.message);
       }
-      
-      throw new Error('Report generation timed out');
-    } catch (error) {
-      showError(error.message);
     }
-  }
 
-  function handleSuccessResponse(data) {
-    if (data.reportUrl) {
-      showReportLink(data.reportUrl);
-    } else {
-      throw new Error('Successful response missing report URL');
+    // Handles synchronous 2xx responses that include { reportUrl: "..." }
+    function handleSuccessResponse(data) {
+      if (data.reportUrl) {
+        showReportLink(data.reportUrl);
+      } else {
+        throw new Error('Successful response missing report URL');
+      }
     }
-  }
 
-  function showReportLink(url) {
-    resultContainer.innerHTML = `
-      <div class="status success">
-        Report generated successfully!<br>
-        <a href="${encodeURI(url)}" target="_blank" rel="noopener">
-          Download PDF Report
-        </a>
-      </div>
-    `;
-    updateStatus('Ready', 'success');
-  }
+    // Updates UI with the link to the generated report
+    function showReportLink(url) {
+      resultContainer.innerHTML = `
+        <div class="status success">
+          Successfully report created!<br>
+          <a href="${encodeURI(url)}" target="_blank" rel="noopener">
+            Download PDF Report
+          </a>
+        </div>
+      `;
+      updateStatus('Ready', 'success');
+    }
 
-  function updateUIResponse(data) {
-    apiResponsePre.textContent = JSON.stringify(data, null, 2);
-  }
+    // Update the <pre> block with latest data
+    function updateUIResponse(data) {
+      apiResponsePre.textContent = JSON.stringify(data, null, 2);
+    }
 
-  function updateStatus(message, type = 'warning') {
-    statusMessage.className = `status ${type}`;
-    statusMessage.innerHTML = message;
-  }
+    // Update status message with a particular style
+    function updateStatus(message, type = 'warning') {
+      statusMessage.className = `status ${type}`;
+      statusMessage.innerHTML = message;
+    }
 
-  function showError(message) {
-    console.error(message);
-    updateStatus(message, 'error');
-    resultContainer.innerHTML = '';
-  }
+    // Show error in the UI
+    function showError(message) {
+      console.error(message);
+      updateStatus(message, 'error');
+      resultContainer.innerHTML = '';
+    }
 
-  function resetUI() {
-    apiResponsePre.textContent = '';
-    resultContainer.innerHTML = '';
-    statusMessage.className = 'status';
-    statusMessage.innerHTML = '';
-  }
-</script>
+    // Reset UI state
+    function resetUI() {
+      apiResponsePre.textContent = '';
+      resultContainer.innerHTML = '';
+      statusMessage.className = 'status';
+      statusMessage.innerHTML = '';
+    }
+  </script>
 </body>
 </html>
