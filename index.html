@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Instant Report Generator</title>
+  <title>Student Report Generator</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -55,6 +55,19 @@
       text-decoration: none;
       border-radius: 4px;
     }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2196F3;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -78,6 +91,10 @@
 
 <script>
   const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
+  const MAX_RETRIES = 30; // 30 attempts
+  const RETRY_DELAY = 2000; // 2 seconds
+  let currentRetries = 0;
+
   const form = document.getElementById('reportForm');
   const submitBtn = document.getElementById('submitBtn');
   const resultContainer = document.getElementById('resultContainer');
@@ -85,55 +102,75 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     submitBtn.disabled = true;
-    resultContainer.innerHTML = '';
-
+    currentRetries = 0;
+    resultContainer.innerHTML = '<div class="loader"></div>';
+    
     const studentId = document.getElementById('studentId').value.trim();
 
     try {
-      // Validate input
       if (!/^\d+$/.test(studentId)) {
         throw new Error('Invalid ID - numbers only');
       }
 
-      // Direct request
-      const response = await fetch(FLOW_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId })
-      });
-
-      // Handle ONLY 200 responses
-      if (response.status !== 200) {
-        throw new Error(`Request failed with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.reportUrl) {
-        throw new Error('Valid report URL not found in response');
-      }
-
-      // Display PDF link
-      resultContainer.innerHTML = `
-        <div class="success">
-          Report ready!
-          <a href="${encodeURI(data.reportUrl)}" 
-             class="pdf-link" 
-             target="_blank" 
-             rel="noopener noreferrer">
-            Download PDF
-          </a>
-        </div>
-      `;
-
+      // Start the retry loop
+      await retryUntilSuccess(studentId);
     } catch (error) {
-      resultContainer.innerHTML = `
-        <div class="error">${error.message}</div>
-      `;
+      showError(error.message);
     } finally {
       submitBtn.disabled = false;
     }
   });
+
+  async function retryUntilSuccess(studentId) {
+    while (currentRetries < MAX_RETRIES) {
+      try {
+        const response = await fetch(FLOW_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId })
+        });
+
+        if (response.status === 200) {
+          const data = await response.json();
+          if (data.reportUrl) {
+            showPdfLink(data.reportUrl);
+            return;
+          }
+          throw new Error('Missing PDF URL in response');
+        }
+
+        // If not 200, continue retrying
+        currentRetries++;
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        
+      } catch (error) {
+        currentRetries++;
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      }
+    }
+    
+    throw new Error('Server did not respond with PDF URL after multiple attempts');
+  }
+
+  function showPdfLink(url) {
+    resultContainer.innerHTML = `
+      <div class="success">
+        Report ready!
+        <a href="${encodeURI(url)}" 
+           class="pdf-link" 
+           target="_blank" 
+           rel="noopener noreferrer">
+          Download PDF
+        </a>
+      </div>
+    `;
+  }
+
+  function showError(message) {
+    resultContainer.innerHTML = `
+      <div class="error">${message}</div>
+    `;
+  }
 </script>
 </body>
 </html>
