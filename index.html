@@ -1,286 +1,274 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>طلب تقرير الخطة الشجرية</title>
-    <style>
-        :root {
-            --primary: #2196F3;
-            --success: #4CAF50;
-            --error: #f44336;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Report Generator</title>
+  <style>
+    :root {
+      --primary: #2196F3;
+      --success: #4CAF50;
+      --error: #f44336;
+      --warning: #ff9800;
+    }
 
-        body {
-            font-family: 'Tahoma', Arial, sans-serif;
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            direction: rtl;
-        }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
 
-        .card {
-            background: #ffffff;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 2rem;
-            margin: 1rem 0;
-        }
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 2rem;
+      margin: 1rem 0;
+    }
 
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
 
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-            color: #333;
-        }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
 
-        input {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            margin-bottom: 1rem;
-        }
+    input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
 
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            width: 100%;
-            transition: transform 0.2s;
-        }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: opacity 0.2s;
+    }
 
-        button:disabled {
-            background: #aaa;
-            cursor: not-allowed;
-        }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
 
-        .emoji-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
-        }
+    .response-container {
+      margin-top: 1.5rem;
+      display: none;
+    }
 
-        .emoji {
-            position: absolute;
-            font-size: 2rem;
-            animation: float 4s infinite linear;
-        }
+    .status {
+      padding: 1rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+    }
 
-        @keyframes float {
-            0% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(180deg); }
-            100% { transform: translateY(0) rotate(360deg); }
-        }
+    .status.success { background: color-mix(in srgb, var(--success) 10%); }
+    .status.error { background: color-mix(in srgb, var(--error) 10%); }
+    .status.warning { background: color-mix(in srgb, var(--warning) 10%); }
 
-        .status {
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1.5rem 0;
-            text-align: center;
-            font-size: 1.2rem;
-        }
-
-        .success {
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
-
-        .error {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .pdf-link {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 1rem 2rem;
-            background: var(--success);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-        }
-
-        @media (max-width: 600px) {
-            .card {
-                padding: 1rem;
-            }
-            
-            input, button {
-                font-size: 1rem;
-            }
-        }
-    </style>
+    pre {
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <h1>طلب تقرير الخطة الشجرية 📚</h1>
-        
-        <form id="reportForm">
-            <div class="form-group">
-                <label for="studentId">رقم  التدريبي:</label>
-                <input 
-                    type="text" 
-                    id="studentId" 
-                    required
-                    pattern="\d+"
-                    inputmode="numeric"
-                    placeholder="الرجاء إدخال الأرقام فقط"
-                >
-            </div>
-            
-            <button type="submit" id="submitBtn">
-                عرض التقرير 🚀
-            </button>
-        </form>
+  <div class="card">
+    <h1>Generate Student Report</h1>
+    
+    <form id="reportForm">
+      <div class="form-group">
+        <label for="studentId">Student ID</label>
+        <input 
+          type="text" 
+          id="studentId" 
+          name="studentId"
+          required
+          pattern="\d+"
+          inputmode="numeric"
+          placeholder="Enter numeric student ID"
+        >
+      </div>
+      
+      <button type="submit" id="submitBtn">
+        Generate Report
+      </button>
+    </form>
 
-        <div class="status" id="statusMessage"></div>
-        <div id="resultContainer"></div>
+    <div class="response-container" id="responseContainer">
+      <div class="status" id="statusMessage"></div>
+      
+      <h3>API Response</h3>
+      <pre id="apiResponse"></pre>
+      
+      <div id="resultContainer"></div>
     </div>
-
-    <div class="emoji-container" id="emojiContainer"></div>
+  </div>
 
 <script>
-    const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
-    const POLL_INTERVAL = 2000;
-    const MAX_ATTEMPTS = 30;
-    const EMOJIS = ['📚', '✏️', '🎓', '📝', '📖', '📊'];
+  const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
+  const POLL_INTERVAL = 1500; // 1.5 seconds
+  const MAX_POLL_ATTEMPTS = 40; // 60 seconds total
+
+  const form = document.getElementById('reportForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const responseContainer = document.getElementById('responseContainer');
+  const statusMessage = document.getElementById('statusMessage');
+  const apiResponsePre = document.getElementById('apiResponse');
+  const resultContainer = document.getElementById('resultContainer');
+
+  form.addEventListener('submit', handleFormSubmit);
+
+  async function handleFormSubmit(e) {
+    e.preventDefault();
+    if (submitBtn.disabled) return;
+
+    // Reset UI state
+    resetUI();
+    submitBtn.disabled = true;
+    responseContainer.style.display = 'block';
+
+    const studentId = document.getElementById('studentId').value.trim();
+
+    try {
+      // Validate input
+      if (!/^\d+$/.test(studentId)) {
+        throw new Error('Invalid Student ID - must contain only numbers');
+      }
+
+      // Initiate report generation
+      const response = await fetch(FLOW_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId })
+      });
+
+      // Handle different response statuses
+      if (response.status === 202) {
+        handleAsyncResponse(response);
+      } else if (response.ok) {
+        handleSuccessResponse(await response.json());
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  async function handleAsyncResponse(response) {
+    let statusUrl;
     
-    let pollTimer = null;
-    let emojiInterval = null;
+    try {
+      // Try to get status URL from headers first
+      statusUrl = response.headers.get('Location');
+      
+      // Fallback to JSON body
+      if (!statusUrl) {
+        const body = await response.json();
+        statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
+      }
 
-    const form = document.getElementById('reportForm');
-    const statusMessage = document.getElementById('statusMessage');
-    const resultContainer = document.getElementById('resultContainer');
-    const emojiContainer = document.getElementById('emojiContainer');
+      if (!statusUrl) {
+        throw new Error('No status URL provided in response');
+      }
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (pollTimer) return;
+      // Start polling
+      await pollReportStatus(statusUrl);
+    } catch (error) {
+      showError(`Failed to process async response: ${error.message}`);
+    }
+  }
 
-        resetUI();
-        startEmojiAnimation();
+  async function pollReportStatus(statusUrl) {
+    let attempts = 0;
+    
+    try {
+      while (attempts < MAX_POLL_ATTEMPTS) {
+        const response = await fetch(statusUrl);
+        const data = await response.json();
         
-        const studentId = document.getElementById('studentId').value.trim();
+        updateUIResponse(data);
+        updateStatus(`Processing report (Attempt ${attempts + 1}/${MAX_POLL_ATTEMPTS})`);
 
-        try {
-            if (!/^\d+$/.test(studentId)) {
-                throw new Error('رقم المتدرب غير صحيح - الأرقام فقط');
-            }
-
-            const response = await fetch(FLOW_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ studentId })
-            });
-
-            if (response.status === 202) {
-                const { statusQueryGetUri } = await response.json();
-                pollStatus(statusQueryGetUri);
-            } else if (response.ok) {
-                handleSuccess(await response.json());
-            } else {
-                throw new Error('خطأ في الاستجابة من الخادم');
-            }
-        } catch (error) {
-            showError(error.message);
-            stopEmojiAnimation();
+        if (data.status === 'Succeeded') {
+          if (data.output?.reportUrl || data.properties?.outputs?.reportUrl) {
+            showReportLink(data.output?.reportUrl || data.properties.outputs.reportUrl);
+            return;
+          }
+          throw new Error('Report URL missing in successful response');
         }
-    });
 
-    async function pollStatus(statusUrl) {
-        let attempts = 0;
-        
-        const checkStatus = async () => {
-            try {
-                const response = await fetch(statusUrl);
-                const data = await response.json();
-                
-                updateStatus(`جاري المعالجة... (المحاولة ${++attempts}/${MAX_ATTEMPTS}) ✨`);
-                
-                if (data.reportUrl) {
-                    handleSuccess(data);
-                    return;
-                }
+        if (data.status === 'Failed') {
+          throw new Error(data.error?.message || 'Report generation failed');
+        }
 
-                if (attempts >= MAX_ATTEMPTS) {
-                    throw new Error('انتهى الوقت المخصص لإنشاء التقرير ⏳');
-                }
-
-                pollTimer = setTimeout(checkStatus, POLL_INTERVAL);
-            } catch (error) {
-                showError(error.message);
-                stopEmojiAnimation();
-            }
-        };
-
-        checkStatus();
+        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+        attempts++;
+      }
+      
+      throw new Error('Report generation timed out');
+    } catch (error) {
+      showError(error.message);
     }
+  }
 
-    function handleSuccess(data) {
-        stopEmojiAnimation();
-        statusMessage.className = 'status success';
-        statusMessage.innerHTML = 'تم إنشاء التقرير بنجاح! 🎉';
-        
-        resultContainer.innerHTML = `
-            <a href="${encodeURI(data.reportUrl)}" 
-               class="pdf-link" 
-               target="_blank" 
-               rel="noopener noreferrer">
-               عرض التقرير 📄
-            </a>
-        `;
+  function handleSuccessResponse(data) {
+    if (data.reportUrl) {
+      showReportLink(data.reportUrl);
+    } else {
+      throw new Error('Successful response missing report URL');
     }
+  }
 
-    function updateStatus(message) {
-        statusMessage.textContent = message;
-    }
+  function showReportLink(url) {
+    resultContainer.innerHTML = `
+      <div class="status success">
+        Report generated successfully!<br>
+        <a href="${encodeURI(url)}" target="_blank" rel="noopener">
+          Download PDF Report
+        </a>
+      </div>
+    `;
+    updateStatus('Ready', 'success');
+  }
 
-    function showError(message) {
-        stopEmojiAnimation();
-        statusMessage.className = 'status error';
-        statusMessage.innerHTML = message;
-    }
+  function updateUIResponse(data) {
+    apiResponsePre.textContent = JSON.stringify(data, null, 2);
+  }
 
-    function resetUI() {
-        statusMessage.className = '';
-        resultContainer.innerHTML = '';
-    }
+  function updateStatus(message, type = 'warning') {
+    statusMessage.className = `status ${type}`;
+    statusMessage.innerHTML = message;
+  }
 
-    function startEmojiAnimation() {
-        emojiInterval = setInterval(() => {
-            const emoji = document.createElement('div');
-            emoji.className = 'emoji';
-            emoji.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-            
-            emoji.style.left = Math.random() * 95 + '%';
-            emoji.style.animationDuration = (Math.random() * 3 + 2) + 's';
-            
-            emojiContainer.appendChild(emoji);
-            
-            setTimeout(() => emoji.remove(), 5000);
-        }, 1000);
-    }
+  function showError(message) {
+    console.error(message);
+    updateStatus(message, 'error');
+    resultContainer.innerHTML = '';
+  }
 
-    function stopEmojiAnimation() {
-        clearInterval(emojiInterval);
-        emojiContainer.innerHTML = '';
-        if (pollTimer) clearTimeout(pollTimer);
-    }
+  function resetUI() {
+    apiResponsePre.textContent = '';
+    resultContainer.innerHTML = '';
+    statusMessage.className = 'status';
+    statusMessage.innerHTML = '';
+  }
 </script>
 </body>
 </html>
