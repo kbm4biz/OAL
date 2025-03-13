@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Student Report Generator</title>
+  <title>إنشاء تقرير المتدرب</title>
   <style>
     :root {
       --primary: #2196F3;
@@ -14,10 +14,11 @@
 
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
-      max-width: 800px;
+      background: #fafafa;
+      max-width: 600px;
       margin: 2rem auto;
       padding: 0 1rem;
-      background: #fafafa;
+      direction: rtl; /* Right-to-left for Arabic */
     }
 
     .card {
@@ -26,6 +27,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       padding: 2rem;
       margin: 1rem 0;
+      width: 100%;
     }
 
     .form-group {
@@ -45,6 +47,7 @@
       border-radius: 4px;
       font-size: 1rem;
       margin-bottom: 0.5rem;
+      text-align: right;
     }
 
     button {
@@ -71,7 +74,6 @@
       padding: 1rem;
       border-radius: 4px;
       margin: 1rem 0;
-      /* Provide fallback background color */
       background: #fff;
     }
     .status.success {
@@ -84,21 +86,29 @@
       background: #fff7e5; /* fallback for warning */
     }
 
-    pre {
-      background: #f5f5f5;
-      padding: 1rem;
-      border-radius: 4px;
-      overflow-x: auto;
+    /* Floating emoji animation */
+    .emoji-group {
+      margin-left: 0.5rem;
+      display: inline-block;
+    }
+    .floating-emoji {
+      display: inline-block;
+      margin-left: 0.1rem;
+      animation: float 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes float {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-5px); }
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Generate Student Report</h1>
+    <h1>إنشاء تقرير الخطه الشجريه للمقررات </h1>
     
     <form id="reportForm">
       <div class="form-group">
-        <label for="studentId">Student ID</label>
+        <label for="studentId">رقم الطالب</label>
         <input 
           type="text" 
           id="studentId" 
@@ -106,38 +116,30 @@
           required
           pattern="\d+"
           inputmode="numeric"
-          placeholder="Enter numeric student ID"
+          placeholder="أدخل رقم الطالب"
         >
       </div>
       
-      <button type="submit" id="submitBtn">
-        Generate Report
-      </button>
+      <button type="submit" id="submitBtn">إنشاء التقرير</button>
     </form>
 
     <div class="response-container" id="responseContainer">
       <div class="status" id="statusMessage"></div>
-      
-      <h3>API Response</h3>
-      <pre id="apiResponse"></pre>
-      
       <div id="resultContainer"></div>
     </div>
   </div>
 
   <script>
-    // Replace with your Power Automate endpoint:
+    // وضع رابط التدفق (Power Automate) هنا
     const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
 
-    // Polling interval and maximum attempts
-    const POLL_INTERVAL = 1500; // 1.5 seconds
-    const MAX_POLL_ATTEMPTS = 40; // total ~60 seconds
+    const POLL_INTERVAL = 1500; // 1.5 ثانية
+    const MAX_POLL_ATTEMPTS = 40; // (حوالي 60 ثانية)
 
     const form = document.getElementById('reportForm');
     const submitBtn = document.getElementById('submitBtn');
     const responseContainer = document.getElementById('responseContainer');
     const statusMessage = document.getElementById('statusMessage');
-    const apiResponsePre = document.getElementById('apiResponse');
     const resultContainer = document.getElementById('resultContainer');
 
     form.addEventListener('submit', handleFormSubmit);
@@ -146,7 +148,6 @@
       e.preventDefault();
       if (submitBtn.disabled) return;
 
-      // Reset UI state
       resetUI();
       submitBtn.disabled = true;
       responseContainer.style.display = 'block';
@@ -154,27 +155,23 @@
       const studentId = document.getElementById('studentId').value.trim();
 
       try {
-        // Basic numeric validation
+        // التحقق من أن الرقم صحيح
         if (!/^\d+$/.test(studentId)) {
-          throw new Error('Invalid Student ID - must contain only numbers');
+          throw new Error('رقم المتدرب غير صحيح - يجب أن يحتوي على أرقام فقط');
         }
 
-        // Initiate report generation
         const response = await fetch(FLOW_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ studentId })
         });
 
-        // Handle different response statuses
         if (response.status === 202) {
-          // Asynchronous response: poll the status URL
           handleAsyncResponse(response);
         } else if (response.ok) {
-          // Synchronous success
           handleSuccessResponse(await response.json());
         } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`خطأ HTTP! الحالة: ${response.status}`);
         }
       } catch (error) {
         showError(error.message);
@@ -183,31 +180,25 @@
       }
     }
 
-    // Processes a 202 response by extracting a status URL and polling it
     async function handleAsyncResponse(response) {
       let statusUrl;
       try {
-        // Check 'Location' header first
+        // حاول قراءة رابط الاستعلام من الهيدر
         statusUrl = response.headers.get('Location');
-        
-        // Fallback: parse JSON body for statusQueryGetUri
         if (!statusUrl) {
           const body = await response.json();
           statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
         }
-
         if (!statusUrl) {
-          throw new Error('No status URL provided in the async response');
+          throw new Error('لا يوجد رابط الحالة في الاستجابة');
         }
 
-        // Start polling
         await pollReportStatus(statusUrl);
       } catch (error) {
-        showError(`Failed to process async response: ${error.message}`);
+        showError(`فشل في معالجة الاستجابة غير المتزامنة: ${error.message}`);
       }
     }
 
-    // Polls the status URL for progress
     async function pollReportStatus(statusUrl) {
       let attempts = 0;
       try {
@@ -215,88 +206,74 @@
           const response = await fetch(statusUrl);
           const data = await response.json();
 
-          updateUIResponse(data);
-          updateStatus(`Processing report (Attempt ${attempts + 1}/${MAX_POLL_ATTEMPTS})`);
+          // بدل النص إلى العربية وأضف الرموز التعبيرية
+          updateStatus(`جاري معالجة التقرير (المحاولة ${attempts + 1}/${MAX_POLL_ATTEMPTS}) 
+            <span class="emoji-group">
+              <span class="floating-emoji">📚</span>
+              <span class="floating-emoji">🎓</span>
+              <span class="floating-emoji">📝</span>
+            </span>`
+          );
 
-          // If the flow uses Durable Functions or a similar pattern,
-          // it may return a 'status' property:
+          // إذا كان التدفق يستخدم خاصية status
           if (data.status === 'Succeeded') {
-            // Check for the final report URL inside 'output' or 'properties'
             const finalReportUrl =
               data?.output?.reportUrl ||
               data?.properties?.outputs?.reportUrl;
-            
             if (finalReportUrl) {
               showReportLink(finalReportUrl);
               return;
             }
-            throw new Error('Report URL missing in successful response');
+            throw new Error('الرابط غير موجود في الاستجابة النهائية');
           }
-
-          // If there's no status, but we directly see a reportUrl
-          // (some flows return { "reportUrl":"..." } without "status")
+          // في حال لم توجد status لكن وجدنا reportUrl
           if (data.reportUrl) {
             showReportLink(data.reportUrl);
             return;
           }
-
           if (data.status === 'Failed') {
-            throw new Error(data.error?.message || 'Report generation failed');
+            throw new Error(data.error?.message || 'فشل إنشاء التقرير');
           }
 
-          // Wait before next attempt
           await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
           attempts++;
         }
-        throw new Error('Report generation timed out');
+        throw new Error('انتهت مهلة إنشاء التقرير');
       } catch (error) {
         showError(error.message);
       }
     }
 
-    // Handles synchronous 2xx responses that include { reportUrl: "..." }
     function handleSuccessResponse(data) {
       if (data.reportUrl) {
         showReportLink(data.reportUrl);
       } else {
-        throw new Error('Successful response missing report URL');
+        throw new Error('لا يوجد رابط التقرير في الاستجابة');
       }
     }
 
-    // Updates UI with the link to the generated report
     function showReportLink(url) {
       resultContainer.innerHTML = `
         <div class="status success">
-          Successfully report created!<br>
-          <a href="${encodeURI(url)}" target="_blank" rel="noopener">
-            Download PDF Report
-          </a>
+          تم إنشاء التقرير بنجاح!<br>
+          <a href="${encodeURI(url)}" target="_blank" rel="noopener">تنزيل تقرير PDF</a>
         </div>
       `;
-      updateStatus('Ready', 'success');
+      updateStatus('جاهز', 'success');
     }
 
-    // Update the <pre> block with latest data
-    function updateUIResponse(data) {
-      apiResponsePre.textContent = JSON.stringify(data, null, 2);
-    }
-
-    // Update status message with a particular style
     function updateStatus(message, type = 'warning') {
       statusMessage.className = `status ${type}`;
       statusMessage.innerHTML = message;
     }
 
-    // Show error in the UI
     function showError(message) {
       console.error(message);
       updateStatus(message, 'error');
       resultContainer.innerHTML = '';
     }
 
-    // Reset UI state
     function resetUI() {
-      apiResponsePre.textContent = '';
       resultContainer.innerHTML = '';
       statusMessage.className = 'status';
       statusMessage.innerHTML = '';
