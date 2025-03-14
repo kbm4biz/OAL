@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"/>
   <title>منصة الارشاد الرقمي</title>
   <style>
+    /* Existing CSS remains unchanged */
     :root {
       --primary: #2196F3;
       --success: #4CAF50;
@@ -177,6 +178,12 @@
       }
     }
   </style>
+  <script>
+    const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
+    const TRAINEES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhbfADDHMJLwjTU5ZL9mJGCIyJhk3JfsvitZJkhNT0Y_hDEhc7T5j1w3aAO8IKTRiIMQcEHp5H2_pG/pub?gid=0&single=true&output=csv'; // Replace with your CSV URL
+    const POLL_INTERVAL = 1500;
+    const MAX_POLL_ATTEMPTS = 40;
+  </script>
 </head>
 <body>
   <h2 class="platform-header">منصة الارشاد الرقمي</h2>
@@ -194,9 +201,10 @@
           id="studentId" 
           name="studentId"
           required
-          pattern="\d+"
+          pattern="4\d{8}"
           inputmode="numeric"
           placeholder="أدخل رقم المتدرب"
+          title="رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4"
         >
       </div>
       
@@ -215,10 +223,6 @@
   </footer>
 
   <script>
-    const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
-    const POLL_INTERVAL = 1500;
-    const MAX_POLL_ATTEMPTS = 40;
-
     const form = document.getElementById('reportForm');
     const submitBtn = document.getElementById('submitBtn');
     const responseContainer = document.getElementById('responseContainer');
@@ -227,7 +231,39 @@
     const emojiContainer = document.getElementById('emojiContainer');
     const emojis = ['📚', '🎓', '📝', '📖', '✏️', '🏫'];
 
-    // Floating emojis animation
+    // New validation functions
+    async function validateTraineeID(studentId) {
+      // Format validation
+      if (!/^4\d{8}$/.test(studentId)) {
+        throw new Error('رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4');
+      }
+
+      // CSV validation
+      try {
+        const response = await fetch(TRAINEES_CSV_URL);
+        if (!response.ok) throw new Error('Failed to fetch trainees list');
+        const csvData = await response.text();
+        const validIDs = parseCSV(csvData);
+        
+        if (!validIDs.includes(studentId)) {
+          throw new Error('تأكد من الرقم التدريبي, الخدمة فقط لمتدربين قسم تقنية الأعمال في كلية حائل-بنين');
+        }
+      } catch (error) {
+        if (error.message.includes('تأكد من الرقم التدريبي')) {
+          throw error;
+        }
+        throw new Error('تعذر التحقق من الرقم التدريبي حالياً، يرجى المحاولة لاحقاً');
+      }
+    }
+
+    function parseCSV(csvText) {
+      return csvText
+        .split('\n')
+        .map(row => row.split(',')[0]?.trim())
+        .filter(id => id && /^4\d{8}$/.test(id));
+    }
+
+    // Existing functions with modified form handler
     function createEmoji() {
       const emoji = document.createElement('div');
       emoji.className = 'emoji-scroll';
@@ -244,7 +280,6 @@
       }
     }
 
-    // Timestamp update
     function updateTimestamp() {
       const options = { hour: 'numeric', minute: '2-digit', hour12: true };
       document.getElementById('timestamp').textContent = new Date().toLocaleTimeString('ar-EG', options);
@@ -252,7 +287,6 @@
     setInterval(updateTimestamp, 1000);
     updateTimestamp();
 
-    // Form handling
     form.addEventListener('submit', handleFormSubmit);
 
     async function handleFormSubmit(e) {
@@ -267,9 +301,7 @@
       const studentId = document.getElementById('studentId').value.trim();
 
       try {
-        if (!/^\d+$/.test(studentId)) {
-          throw new Error('رقم المتدرب غير صحيح - يجب أن يحتوي على أرقام فقط');
-        }
+        await validateTraineeID(studentId);
 
         const response = await fetch(FLOW_ENDPOINT, {
           method: 'POST',
@@ -291,6 +323,7 @@
       }
     }
 
+    // Rest of existing JavaScript remains unchanged
     async function handleAsyncResponse(response) {
       let statusUrl;
       try {
@@ -360,11 +393,10 @@
         <div class="status success">
           تم إنشاء التقرير بنجاح!<br>
           <a href="${encodeURI(url)}" target="_blank" rel="noopener">تحميل📄⬇️ تقرير PDF</a>
-         
-  <img 
-    src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" 
-    alt="QR Code"
-  />
+          <img 
+            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" 
+            alt="QR Code"
+          />
         </div>
       `;
       updateStatus('جاهز', 'success');
