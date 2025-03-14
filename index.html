@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"/>
   <title>منصة الارشاد الرقمي</title>
   <style>
-    /* Existing CSS remains unchanged */
+    /* All original CSS remains unchanged */
     :root {
       --primary: #2196F3;
       --success: #4CAF50;
@@ -180,7 +180,7 @@
   </style>
   <script>
     const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
-    const TRAINEES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhbfADDHMJLwjTU5ZL9mJGCIyJhk3JfsvitZJkhNT0Y_hDEhc7T5j1w3aAO8IKTRiIMQcEHp5H2_pG/pub?gid=0&single=true&output=csv'; // Replace with your CSV URL
+    const TRAINEES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhbfADDHMJLwjTU5ZL9mJGCIyJhk3JfsvitZJkhNT0Y_hDEhc7T5j1w3aAO8IKTRiIMQcEHp5H2_pG/pub?gid=0&single=true&output=csv';
     const POLL_INTERVAL = 1500;
     const MAX_POLL_ATTEMPTS = 40;
   </script>
@@ -231,39 +231,7 @@
     const emojiContainer = document.getElementById('emojiContainer');
     const emojis = ['📚', '🎓', '📝', '📖', '✏️', '🏫'];
 
-    // New validation functions
-    async function validateTraineeID(studentId) {
-      // Format validation
-      if (!/^4\d{8}$/.test(studentId)) {
-        throw new Error('رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4');
-      }
-
-      // CSV validation
-      try {
-        const response = await fetch(TRAINEES_CSV_URL);
-        if (!response.ok) throw new Error('Failed to fetch trainees list');
-        const csvData = await response.text();
-        const validIDs = parseCSV(csvData);
-        
-        if (!validIDs.includes(studentId)) {
-          throw new Error('تأكد من الرقم التدريبي, الخدمة فقط لمتدربين قسم تقنية الأعمال في كلية حائل-بنين');
-        }
-      } catch (error) {
-        if (error.message.includes('تأكد من الرقم التدريبي')) {
-          throw error;
-        }
-        throw new Error('تعذر التحقق من الرقم التدريبي حالياً، يرجى المحاولة لاحقاً');
-      }
-    }
-
-    function parseCSV(csvText) {
-      return csvText
-        .split('\n')
-        .map(row => row.split(',')[0]?.trim())
-        .filter(id => id && /^4\d{8}$/.test(id));
-    }
-
-    // Existing functions with modified form handler
+    // Emoji animation functions
     function createEmoji() {
       const emoji = document.createElement('div');
       emoji.className = 'emoji-scroll';
@@ -280,6 +248,7 @@
       }
     }
 
+    // Timestamp updates
     function updateTimestamp() {
       const options = { hour: 'numeric', minute: '2-digit', hour12: true };
       document.getElementById('timestamp').textContent = new Date().toLocaleTimeString('ar-EG', options);
@@ -287,33 +256,70 @@
     setInterval(updateTimestamp, 1000);
     updateTimestamp();
 
-    form.addEventListener('submit', handleFormSubmit);
+    // CSV Validation
+    async function validateTrainee(studentId) {
+      // First validation: Format check
+      if (!/^4\d{8}$/.test(studentId)) {
+        throw new Error('رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4');
+      }
 
-    async function handleFormSubmit(e) {
+      // Second validation: CSV check
+      try {
+        const response = await fetch(TRAINEES_CSV_URL);
+        if (!response.ok) throw new Error('تعذر تحميل قائمة المتدربين');
+        const csvData = await response.text();
+        const validIDs = csvData.split('\n')
+          .map(row => row.split(',')[0]?.trim())
+          .filter(id => id && /^4\d{8}$/.test(id));
+
+        if (!validIDs.includes(studentId)) {
+          throw new Error('تأكد من الرقم التدريبي, الخدمة فقط لمتدربين قسم تقنية الأعمال في كلية حائل-بنين');
+        }
+      } catch (error) {
+        if (error.message.includes('تأكد من الرقم التدريبي')) throw error;
+        throw new Error('تعذر التحقق من الرقم التدريبي حالياً، يرجى المحاولة لاحقاً');
+      }
+    }
+
+    // Form submission handler
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (submitBtn.disabled) return;
 
+      submitBtn.disabled = true;
       startEmojiAnimation();
       resetUI();
-      submitBtn.disabled = true;
       responseContainer.style.display = 'block';
 
       const studentId = document.getElementById('studentId').value.trim();
 
       try {
-        await validateTraineeID(studentId);
+        // Perform validations
+        await validateTrainee(studentId);
 
+        // Trigger Power Automate flow
         const response = await fetch(FLOW_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ studentId })
         });
 
+        // Handle flow response
         if (response.status === 202) {
-          handleAsyncResponse(response);
-        } else if (response.ok) {
-          handleSuccessResponse(await response.json());
-        } else {
+          let statusUrl = response.headers.get('Location');
+          if (!statusUrl) {
+            const body = await response.json();
+            statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
+          }
+          if (!statusUrl) throw new Error('لا يوجد رابط الحالة في الاستجابة');
+          await pollReportStatus(statusUrl);
+        } 
+        else if (response.ok) {
+          const data = await response.json();
+          if (data.reportUrl) showReportLink(data.reportUrl);
+          else throw new Error('لا يوجد رابط التقرير في الاستجابة');
+        } 
+        else {
           throw new Error(`خطأ HTTP! الحالة: ${response.status}`);
         }
       } catch (error) {
@@ -321,25 +327,9 @@
       } finally {
         submitBtn.disabled = false;
       }
-    }
+    });
 
-    // Rest of existing JavaScript remains unchanged
-    async function handleAsyncResponse(response) {
-      let statusUrl;
-      try {
-        statusUrl = response.headers.get('Location');
-        if (!statusUrl) {
-          const body = await response.json();
-          statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
-        }
-        if (!statusUrl) throw new Error('لا يوجد رابط الحالة في الاستجابة');
-
-        await pollReportStatus(statusUrl);
-      } catch (error) {
-        showError(`فشل في معالجة الاستجابة غير المتزامنة: ${error.message}`);
-      }
-    }
-
+    // Polling function for async operations
     async function pollReportStatus(statusUrl) {
       let attempts = 0;
       try {
@@ -356,20 +346,12 @@
           );
 
           if (data.status === 'Succeeded') {
-            const finalReportUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
-            if (finalReportUrl) {
-              showReportLink(finalReportUrl);
-              return;
-            }
+            const finalUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
+            if (finalUrl) return showReportLink(finalUrl);
             throw new Error('الرابط غير موجود في الاستجابة النهائية');
           }
-          if (data.reportUrl) {
-            showReportLink(data.reportUrl);
-            return;
-          }
-          if (data.status === 'Failed') {
-            throw new Error(data.error?.message || 'فشل إنشاء التقرير');
-          }
+          if (data.reportUrl) return showReportLink(data.reportUrl);
+          if (data.status === 'Failed') throw new Error(data.error?.message || 'فشل إنشاء التقرير');
 
           await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
           attempts++;
@@ -380,14 +362,7 @@
       }
     }
 
-    function handleSuccessResponse(data) {
-      if (data.reportUrl) {
-        showReportLink(data.reportUrl);
-      } else {
-        throw new Error('لا يوجد رابط التقرير في الاستجابة');
-      }
-    }
-
+    // UI Update functions
     function showReportLink(url) {
       resultContainer.innerHTML = `
         <div class="status success">
