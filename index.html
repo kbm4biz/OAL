@@ -2,8 +2,8 @@
 <html lang="ar">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>إنشاء تقرير المتدرب</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"/>
+  <title>منصة الارشاد الرقمي</title>
   <style>
     :root {
       --primary: #2196F3;
@@ -17,8 +17,18 @@
       background: #fafafa;
       max-width: 600px;
       margin: 2rem auto;
-      padding: 0 1rem;
-      direction: rtl; /* Right-to-left for Arabic */
+      padding: 0 1rem 80px;
+      direction: rtl;
+      position: relative;
+    }
+
+    .platform-header {
+      text-align: center;
+      color: var(--primary);
+      margin: 1rem 0;
+      font-size: 2rem;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
     }
 
     .card {
@@ -26,12 +36,40 @@
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       padding: 2rem;
-      margin: 1rem 0;
+      margin: 1rem auto;
       width: 100%;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 1;
+    }
+
+    .emoji-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .emoji-scroll {
+      position: absolute;
+      animation: scrollUp 20s linear infinite;
+      opacity: 0.2;
+      font-size: 1.5rem;
+      user-select: none;
+    }
+
+    @keyframes scrollUp {
+      from { transform: translateY(100vh); }
+      to { transform: translateY(-100%); }
     }
 
     .form-group {
       margin-bottom: 1.5rem;
+      text-align: center;
     }
 
     label {
@@ -42,11 +80,13 @@
 
     input {
       width: 100%;
+      max-width: 400px;
       padding: 0.75rem;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 1rem;
-      margin-bottom: 0.5rem;
+      margin: 0 auto 0.5rem;
+      display: block;
       text-align: right;
     }
 
@@ -59,7 +99,12 @@
       cursor: pointer;
       font-size: 1rem;
       transition: opacity 0.2s;
+      display: block;
+      margin: 1rem auto;
+      width: 200px;
+      max-width: 100%;
     }
+
     button:disabled {
       background: #ccc;
       cursor: not-allowed;
@@ -68,6 +113,7 @@
     .response-container {
       margin-top: 1.5rem;
       display: none;
+      text-align: center;
     }
 
     .status {
@@ -76,33 +122,67 @@
       margin: 1rem 0;
       background: #fff;
     }
+
     .status.success {
-      background: #e7f8e9; /* fallback for success */
-    }
-    .status.error {
-      background: #fdebec; /* fallback for error */
-    }
-    .status.warning {
-      background: #fff7e5; /* fallback for warning */
+      background: #e7f8e9;
     }
 
-    /* Floating emoji animation */
-    .emoji-group {
-      margin-left: 0.5rem;
-      display: inline-block;
+    .status.error {
+      background: #fdebec;
     }
-    .floating-emoji {
-      display: inline-block;
-      margin-left: 0.1rem;
-      animation: float 1.5s ease-in-out infinite alternate;
+
+    .status.warning {
+      background: #fff7e5;
     }
-    @keyframes float {
-      from { transform: translateY(0); }
-      to   { transform: translateY(-5px); }
+
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+      border-top: 1px solid #ddd;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-direction: row-reverse;
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 1rem;
+      }
+      
+      .platform-header {
+        font-size: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+      }
+
+      button {
+        width: 100%;
+        padding: 0.75rem;
+      }
+
+      .footer {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.75rem;
+      }
     }
   </style>
 </head>
 <body>
+  <h2 class="platform-header">منصة الارشاد الرقمي</h2>
+
+  <div class="emoji-background" id="emojiContainer"></div>
+
   <div class="card">
     <h1>إنشاء تقرير الخطه الشجريه للمقررات </h1>
     
@@ -129,25 +209,57 @@
     </div>
   </div>
 
-  <script>
-    // وضع رابط التدفق (Power Automate) هنا
-    const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
+  <footer class="footer">
+    <span>فكره واعداد خالد الأيداء</span>
+    <span id="timestamp"></span>
+  </footer>
 
-    const POLL_INTERVAL = 1500; // 1.5 ثانية
-    const MAX_POLL_ATTEMPTS = 40; // (حوالي 60 ثانية)
+  <script>
+    const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
+    const POLL_INTERVAL = 1500;
+    const MAX_POLL_ATTEMPTS = 40;
 
     const form = document.getElementById('reportForm');
     const submitBtn = document.getElementById('submitBtn');
     const responseContainer = document.getElementById('responseContainer');
     const statusMessage = document.getElementById('statusMessage');
     const resultContainer = document.getElementById('resultContainer');
+    const emojiContainer = document.getElementById('emojiContainer');
+    const emojis = ['📚', '🎓', '📝', '📖', '✏️', '🏫'];
 
+    // Floating emojis animation
+    function createEmoji() {
+      const emoji = document.createElement('div');
+      emoji.className = 'emoji-scroll';
+      emoji.style.left = `${Math.random() * 100}%`;
+      emoji.style.animationDuration = `${10 + Math.random() * 20}s`;
+      emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      emojiContainer.appendChild(emoji);
+    }
+
+    function startEmojiAnimation() {
+      emojiContainer.innerHTML = '';
+      for(let i = 0; i < 20; i++) {
+        setTimeout(createEmoji, i * 500);
+      }
+    }
+
+    // Timestamp update
+    function updateTimestamp() {
+      const options = { hour: 'numeric', minute: '2-digit', hour12: true };
+      document.getElementById('timestamp').textContent = new Date().toLocaleTimeString('ar-EG', options);
+    }
+    setInterval(updateTimestamp, 1000);
+    updateTimestamp();
+
+    // Form handling
     form.addEventListener('submit', handleFormSubmit);
 
     async function handleFormSubmit(e) {
       e.preventDefault();
       if (submitBtn.disabled) return;
 
+      startEmojiAnimation();
       resetUI();
       submitBtn.disabled = true;
       responseContainer.style.display = 'block';
@@ -155,7 +267,6 @@
       const studentId = document.getElementById('studentId').value.trim();
 
       try {
-        // التحقق من أن الرقم صحيح
         if (!/^\d+$/.test(studentId)) {
           throw new Error('رقم المتدرب غير صحيح - يجب أن يحتوي على أرقام فقط');
         }
@@ -183,15 +294,12 @@
     async function handleAsyncResponse(response) {
       let statusUrl;
       try {
-        // حاول قراءة رابط الاستعلام من الهيدر
         statusUrl = response.headers.get('Location');
         if (!statusUrl) {
           const body = await response.json();
           statusUrl = body.statusQueryGetUri || body.properties?.statusQueryGetUri;
         }
-        if (!statusUrl) {
-          throw new Error('لا يوجد رابط الحالة في الاستجابة');
-        }
+        if (!statusUrl) throw new Error('لا يوجد رابط الحالة في الاستجابة');
 
         await pollReportStatus(statusUrl);
       } catch (error) {
@@ -206,7 +314,6 @@
           const response = await fetch(statusUrl);
           const data = await response.json();
 
-          // بدل النص إلى العربية وأضف الرموز التعبيرية
           updateStatus(`جاري إعداد التقرير (الخطوة ${attempts + 1}/${MAX_POLL_ATTEMPTS}) 
             <span class="emoji-group">
               <span class="floating-emoji">📚</span>
@@ -215,18 +322,14 @@
             </span>`
           );
 
-          // إذا كان التدفق يستخدم خاصية status
           if (data.status === 'Succeeded') {
-            const finalReportUrl =
-              data?.output?.reportUrl ||
-              data?.properties?.outputs?.reportUrl;
+            const finalReportUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
             if (finalReportUrl) {
               showReportLink(finalReportUrl);
               return;
             }
             throw new Error('الرابط غير موجود في الاستجابة النهائية');
           }
-          // في حال لم توجد status لكن وجدنا reportUrl
           if (data.reportUrl) {
             showReportLink(data.reportUrl);
             return;
