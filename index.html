@@ -108,7 +108,7 @@
     
     <form id="reportForm">
       <div class="form-group">
-        <label for="studentId">رقم الطالب</label>
+        <label for="studentId">رقم المتدرب</label>
         <input 
           type="text" 
           id="studentId" 
@@ -116,7 +116,7 @@
           required
           pattern="\d+"
           inputmode="numeric"
-          placeholder="أدخل رقم الطالب"
+          placeholder="أدخل رقم المتدرب"
         >
       </div>
       
@@ -207,7 +207,7 @@
           const data = await response.json();
 
           // بدل النص إلى العربية وأضف الرموز التعبيرية
-          updateStatus(`جاري معالجة التقرير (المحاولة ${attempts + 1}/${MAX_POLL_ATTEMPTS}) 
+          updateStatus(`جاري إعداد التقرير (الخطوة ${attempts + 1}/${MAX_POLL_ATTEMPTS}) 
             <span class="emoji-group">
               <span class="floating-emoji">📚</span>
               <span class="floating-emoji">🎓</span>
