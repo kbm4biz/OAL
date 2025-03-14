@@ -360,6 +360,11 @@
         <div class="status success">
           تم إنشاء التقرير بنجاح!<br>
           <a href="${encodeURI(url)}" target="_blank" rel="noopener">تنزيل تقرير PDF</a>
+         
+  <img 
+    src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" 
+    alt="QR Code"
+  />
         </div>
       `;
       updateStatus('جاهز', 'success');
