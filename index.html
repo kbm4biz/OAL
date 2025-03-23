@@ -189,14 +189,78 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
+
+    /* New CSS for the scrolling news banner */
+    .news-banner {
+      background: red;
+      color: white;
+      padding: 10px 0;
+      text-align: center;
+      font-weight: bold;
+      overflow: hidden;
+      white-space: nowrap;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 3;
+    }
+
+    .news-banner p {
+      display: inline-block;
+      padding-left: 100%;
+      animation: scrollLeft 10s linear infinite;
+      margin: 0;
+    }
+
+    @keyframes scrollLeft {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* Style for the disabled form message */
+    #formDisabledMessage {
+      text-align: center;
+      color: red;
+      font-weight: bold;
+      margin: 2rem 0;
+    }
   </style>
   <script>
+    // Configuration flags (set these to true or false as needed)
+    const ENABLE_FORM = true;        // Set to false to disable the form
+    const ENABLE_BANNER = true;      // Set to false to hide the news banner
+    const NEWS_BANNER_TEXT = "أحدث الأخبار: هذا مثال على رسالة متحركة"; // Change the banner text as needed
+
     const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
     const TRAINEES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhbfADDHMJLwjTU5ZL9mJGCIyJhk3JfsvitZJkhNT0Y_hDEhc7T5j1w3aAO8IKTRiIMQcEHp5H2_pG/pub?gid=0&single=true&output=csv';
     const POLL_INTERVAL = 1500;
+
+    // DOMContentLoaded to ensure elements are available
+    document.addEventListener("DOMContentLoaded", function() {
+      // Toggle the news banner visibility and set its text
+      const banner = document.getElementById('newsBanner');
+      if (!ENABLE_BANNER) {
+        banner.style.display = "none";
+      } else {
+        banner.style.display = "block";
+        banner.querySelector('p').textContent = NEWS_BANNER_TEXT;
+      }
+      
+      // Toggle the form availability
+      if (!ENABLE_FORM) {
+        document.getElementById('reportForm').style.display = "none";
+        document.getElementById('formDisabledMessage').style.display = "block";
+      }
+    });
   </script>
 </head>
 <body>
+  <!-- Scrolling news banner -->
+  <div id="newsBanner" class="news-banner">
+    <p></p>
+  </div>
+
   <h2 class="platform-header">منصة الارشاد الرقمي</h2>
 
   <div class="emoji-background" id="emojiContainer"></div>
@@ -204,6 +268,7 @@
   <div class="card">
     <h1>إنشاء تقرير الخطه الشجريه للمقررات </h1>
     
+    <!-- The form. It will be hidden if ENABLE_FORM is false -->
     <form id="reportForm">
       <div class="form-group">
         <label for="studentId">رقم المتدرب</label>
@@ -221,6 +286,10 @@
       
       <button type="submit" id="submitBtn">إنشاء التقرير</button>
     </form>
+    <!-- Disabled form message (shown when ENABLE_FORM is false) -->
+    <div id="formDisabledMessage" style="display:none;">
+      الخدمة متوقفة حالياو حاول جددا
+    </div>
 
     <div class="response-container" id="responseContainer">
       <div class="status" id="statusMessage"></div>
@@ -325,18 +394,14 @@
     }
 
     // Function to update the loading UI with step indicators.
-    // activeStep: number of steps completed; if activeStep equals steps.length - 1, the final step remains active.
     function updateStepsUI(steps, activeStep) {
       let html = '<ul>';
       for (let i = 0; i < steps.length; i++) {
         if (i < activeStep) {
-          // Completed step: show green tick mark
           html += `<li>${steps[i]} <span>✅</span></li>`;
         } else if (i === activeStep) {
-          // Active step: show spinning gear
           html += `<li>${steps[i]} <span class="scrolling-gear">⚙️</span></li>`;
         } else {
-          // Future step: no extra icon
           html += `<li>${steps[i]}</li>`;
         }
       }
@@ -344,8 +409,7 @@
       updateStatus(html, 'warning');
     }
 
-    // Function to simulate progress through steps independently of API timing.
-    // When the final (last) step is reached, it stays active until the report is ready.
+    // Function to simulate progress through steps
     function startProgressSteps(steps, updateCallback) {
       let currentStep = 0;
       let stopped = false;
@@ -356,17 +420,14 @@
         if (currentStep < steps.length - 1) {
           currentStep++;
           updateCallback(steps, currentStep);
-          // Random delay between 2000ms and 4000ms
           const delay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
           timer = setTimeout(nextStep, delay);
         } else {
-          // Already at the final step; keep it active by re-calling update periodically
           updateCallback(steps, currentStep);
           timer = setTimeout(nextStep, 3000);
         }
       }
       
-      // Initial UI update with the first step active
       updateCallback(steps, currentStep);
       const initialDelay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
       timer = setTimeout(nextStep, initialDelay);
@@ -376,7 +437,6 @@
           stopped = true;
           clearTimeout(timer);
         },
-        // When complete is called, mark all steps as done.
         complete: () => {
           stopped = true;
           currentStep = steps.length;
@@ -385,7 +445,7 @@
       };
     }
 
-    // Polling function for async operations with decoupled step-by-step UI progress.
+    // Polling function for async operations with decoupled UI progress.
     async function pollReportStatus(statusUrl) {
       const steps = [
         "جاري جلب البيانات",
@@ -395,7 +455,6 @@
         "الاعداد النهائي للملخص الشامل"
       ];
       
-      // Start the progress UI independently (with random intervals)
       const progress = startProgressSteps(steps, updateStepsUI);
       
       try {
