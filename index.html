@@ -345,9 +345,11 @@
     async function pollReportStatus(statusUrl) {
       let attempt = 0;
       const loadingSteps = [
-        "جاري جلب البيانات<br>جاري تحليل البيانات",
+        "جاري جلب البيانات"
+        ,"جاري تحليل البيانات",
         "جاري رسم الخطة الشجرية",
-        "جاري اعداد المخططات البيانية<br>الاعداد النهائي للملخص الشامل"
+        "جاري اعداد المخططات البيانية"
+        ,"الاعداد النهائي للملخص الشامل"
       ];
 
       try {
@@ -356,7 +358,7 @@
           updateLoadingUI(loadingSteps, stepIndex);
 
           // Wait for 3 seconds for each step
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 9000));
 
           const response = await fetch(statusUrl);
           const data = await response.json();
