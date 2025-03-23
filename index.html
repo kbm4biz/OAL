@@ -341,37 +341,39 @@
       }
     });
 
-    // Polling function for async operations with professional loading
+    // Polling function for async operations with step-by-step loading
     async function pollReportStatus(statusUrl) {
-      let attempt = 0;
-      const loadingSteps = [
-        "جاري جلب البيانات"
-        ,"جاري تحليل البيانات",
+      const steps = [
+        "جاري جلب البيانات",
+        "جاري تحليل البيانات",
         "جاري رسم الخطة الشجرية",
-        "جاري اعداد المخططات البيانية"
-        ,"الاعداد النهائي للملخص الشامل"
+        "جاري اعداد المخططات البيانية",
+        "الاعداد النهائي للملخص الشامل"
       ];
+      // Divide a total of 22 seconds evenly among the 5 steps (~4400ms per step)
+      const stepDuration = 22000 / steps.length; 
 
       try {
-        while (attempt < MAX_POLL_ATTEMPTS) {
-          const stepIndex = attempt % loadingSteps.length;
-          updateLoadingUI(loadingSteps, stepIndex);
-
-          // Wait for 3 seconds for each step
-          await new Promise(resolve => setTimeout(resolve, 9000));
-
+        for (let i = 0; i < steps.length; i++) {
+          updateStepsUI(steps, i);
+          // Poll status at the beginning of each step
           const response = await fetch(statusUrl);
           const data = await response.json();
 
           if (data.status === 'Succeeded') {
             const finalUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
-            if (finalUrl) return showReportLink(finalUrl);
+            if (finalUrl) {
+              // Mark all steps complete before showing the report
+              updateStepsUI(steps, steps.length);
+              return showReportLink(finalUrl);
+            }
             throw new Error('الرابط غير موجود في الاستجابة النهائية');
           }
           if (data.reportUrl) return showReportLink(data.reportUrl);
           if (data.status === 'Failed') throw new Error(data.error?.message || 'فشل إنشاء التقرير');
 
-          attempt++;
+          // Wait for the duration of the current step before moving to the next
+          await new Promise(resolve => setTimeout(resolve, stepDuration));
         }
         throw new Error('انتهت مهلة إنشاء التقرير');
       } catch (error) {
@@ -379,11 +381,20 @@
       }
     }
 
-    // Function to update the loading UI with bullet points and a scrolling gear emoji
-    function updateLoadingUI(steps, activeIndex) {
+    // Function to update the loading UI with step indicators
+    function updateStepsUI(steps, activeIndex) {
       let html = '<ul>';
       for (let i = 0; i < steps.length; i++) {
-        html += `<li>${steps[i]} ${i === activeIndex ? '<span class="scrolling-gear">⚙️</span>' : ''}</li>`;
+        if (i < activeIndex) {
+          // Completed step: show green tick mark
+          html += `<li>${steps[i]} <span>✅</span></li>`;
+        } else if (i === activeIndex && activeIndex < steps.length) {
+          // Active step: show spinning gear
+          html += `<li>${steps[i]} <span class="scrolling-gear">⚙️</span></li>`;
+        } else {
+          // Future step: no extra icon
+          html += `<li>${steps[i]}</li>`;
+        }
       }
       html += '</ul>';
       updateStatus(html, 'warning');
