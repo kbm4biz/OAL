@@ -324,15 +324,15 @@
       statusMessage.innerHTML = '';
     }
 
-    // Function to update the loading UI with step indicators
-    // activeStep: number of completed steps; if activeStep equals steps.length then all are complete
+    // Function to update the loading UI with step indicators.
+    // activeStep: number of steps completed; if activeStep equals steps.length - 1, the final step remains active.
     function updateStepsUI(steps, activeStep) {
       let html = '<ul>';
       for (let i = 0; i < steps.length; i++) {
         if (i < activeStep) {
           // Completed step: show green tick mark
           html += `<li>${steps[i]} <span>✅</span></li>`;
-        } else if (i === activeStep && activeStep < steps.length) {
+        } else if (i === activeStep) {
           // Active step: show spinning gear
           html += `<li>${steps[i]} <span class="scrolling-gear">⚙️</span></li>`;
         } else {
@@ -345,7 +345,7 @@
     }
 
     // Function to simulate progress through steps independently of API timing.
-    // It advances the steps at random intervals until stopped.
+    // When the final (last) step is reached, it stays active until the report is ready.
     function startProgressSteps(steps, updateCallback) {
       let currentStep = 0;
       let stopped = false;
@@ -353,12 +353,16 @@
       
       function nextStep() {
         if (stopped) return;
-        currentStep++;
-        updateCallback(steps, currentStep);
-        if (currentStep < steps.length) {
+        if (currentStep < steps.length - 1) {
+          currentStep++;
+          updateCallback(steps, currentStep);
           // Random delay between 2000ms and 4000ms
           const delay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
           timer = setTimeout(nextStep, delay);
+        } else {
+          // Already at the final step; keep it active by re-calling update periodically
+          updateCallback(steps, currentStep);
+          timer = setTimeout(nextStep, 3000);
         }
       }
       
@@ -372,6 +376,7 @@
           stopped = true;
           clearTimeout(timer);
         },
+        // When complete is called, mark all steps as done.
         complete: () => {
           stopped = true;
           currentStep = steps.length;
