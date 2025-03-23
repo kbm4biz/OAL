@@ -194,7 +194,6 @@
     const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
     const TRAINEES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhbfADDHMJLwjTU5ZL9mJGCIyJhk3JfsvitZJkhNT0Y_hDEhc7T5j1w3aAO8IKTRiIMQcEHp5H2_pG/pub?gid=0&single=true&output=csv';
     const POLL_INTERVAL = 1500;
-    const MAX_POLL_ATTEMPTS = 40;
   </script>
 </head>
 <body>
@@ -293,6 +292,136 @@
       }
     }
 
+    // UI Update functions
+    function showReportLink(url) {
+      resultContainer.innerHTML = `
+        <div class="status success">
+          تم إنشاء التقرير بنجاح!<br>
+          <a href="${encodeURI(url)}" target="_blank" rel="noopener">تحميل📄⬇️ تقرير PDF</a>
+          <img 
+            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" 
+            alt="QR Code"
+          />
+        </div>
+      `;
+      updateStatus('جاهز', 'success');
+    }
+
+    function updateStatus(message, type = 'warning') {
+      statusMessage.className = `status ${type}`;
+      statusMessage.innerHTML = message;
+    }
+
+    function showError(message) {
+      console.error(message);
+      updateStatus(message, 'error');
+      resultContainer.innerHTML = '';
+    }
+
+    function resetUI() {
+      resultContainer.innerHTML = '';
+      statusMessage.className = 'status';
+      statusMessage.innerHTML = '';
+    }
+
+    // Function to update the loading UI with step indicators
+    // activeStep: number of completed steps; if activeStep equals steps.length then all are complete
+    function updateStepsUI(steps, activeStep) {
+      let html = '<ul>';
+      for (let i = 0; i < steps.length; i++) {
+        if (i < activeStep) {
+          // Completed step: show green tick mark
+          html += `<li>${steps[i]} <span>✅</span></li>`;
+        } else if (i === activeStep && activeStep < steps.length) {
+          // Active step: show spinning gear
+          html += `<li>${steps[i]} <span class="scrolling-gear">⚙️</span></li>`;
+        } else {
+          // Future step: no extra icon
+          html += `<li>${steps[i]}</li>`;
+        }
+      }
+      html += '</ul>';
+      updateStatus(html, 'warning');
+    }
+
+    // Function to simulate progress through steps independently of API timing.
+    // It advances the steps at random intervals until stopped.
+    function startProgressSteps(steps, updateCallback) {
+      let currentStep = 0;
+      let stopped = false;
+      let timer;
+      
+      function nextStep() {
+        if (stopped) return;
+        currentStep++;
+        updateCallback(steps, currentStep);
+        if (currentStep < steps.length) {
+          // Random delay between 2000ms and 4000ms
+          const delay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
+          timer = setTimeout(nextStep, delay);
+        }
+      }
+      
+      // Initial UI update with the first step active
+      updateCallback(steps, currentStep);
+      const initialDelay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
+      timer = setTimeout(nextStep, initialDelay);
+      
+      return {
+        stop: () => {
+          stopped = true;
+          clearTimeout(timer);
+        },
+        complete: () => {
+          stopped = true;
+          currentStep = steps.length;
+          updateCallback(steps, currentStep);
+        }
+      };
+    }
+
+    // Polling function for async operations with decoupled step-by-step UI progress.
+    async function pollReportStatus(statusUrl) {
+      const steps = [
+        "جاري جلب البيانات",
+        "جاري تحليل البيانات",
+        "جاري رسم الخطة الشجرية",
+        "جاري اعداد المخططات البيانية",
+        "الاعداد النهائب للملخص الشامل"
+      ];
+      
+      // Start the progress UI independently (with random intervals)
+      const progress = startProgressSteps(steps, updateStepsUI);
+      
+      try {
+        while (true) {
+          const response = await fetch(statusUrl);
+          const data = await response.json();
+          
+          if (data.status === 'Succeeded') {
+            const finalUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
+            if (finalUrl) {
+              progress.complete();
+              return showReportLink(finalUrl);
+            }
+            throw new Error('الرابط غير موجود في الاستجابة النهائية');
+          }
+          if (data.reportUrl) {
+            progress.complete();
+            return showReportLink(data.reportUrl);
+          }
+          if (data.status === 'Failed') {
+            progress.stop();
+            throw new Error(data.error?.message || 'فشل إنشاء التقرير');
+          }
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+        }
+      } catch (error) {
+        progress.stop();
+        showError(error.message);
+      }
+    }
+
     // Form submission handler
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -340,97 +469,6 @@
         submitBtn.disabled = false;
       }
     });
-
-    // Polling function for async operations with step-by-step loading
-    async function pollReportStatus(statusUrl) {
-      const steps = [
-        "جاري جلب البيانات",
-        "جاري تحليل البيانات",
-        "جاري رسم الخطة الشجرية",
-        "جاري اعداد المخططات البيانية",
-        "الاعداد النهائي للملخص الشامل"
-      ];
-      // Divide a total of 22 seconds evenly among the 5 steps (~4400ms per step)
-      const stepDuration = 33000 / steps.length; 
-
-      try {
-        for (let i = 0; i < steps.length; i++) {
-          updateStepsUI(steps, i);
-          // Poll status at the beginning of each step
-          const response = await fetch(statusUrl);
-          const data = await response.json();
-
-          if (data.status === 'Succeeded') {
-            const finalUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
-            if (finalUrl) {
-              // Mark all steps complete before showing the report
-              updateStepsUI(steps, steps.length);
-              return showReportLink(finalUrl);
-            }
-            throw new Error('الرابط غير موجود في الاستجابة النهائية');
-          }
-          if (data.reportUrl) return showReportLink(data.reportUrl);
-          if (data.status === 'Failed') throw new Error(data.error?.message || 'فشل إنشاء التقرير');
-
-          // Wait for the duration of the current step before moving to the next
-          await new Promise(resolve => setTimeout(resolve, stepDuration));
-        }
-        throw new Error('انتهت مهلة إنشاء التقرير');
-      } catch (error) {
-        showError(error.message);
-      }
-    }
-
-    // Function to update the loading UI with step indicators
-    function updateStepsUI(steps, activeIndex) {
-      let html = '<ul>';
-      for (let i = 0; i < steps.length; i++) {
-        if (i < activeIndex) {
-          // Completed step: show green tick mark
-          html += `<li>${steps[i]} <span>✅</span></li>`;
-        } else if (i === activeIndex && activeIndex < steps.length) {
-          // Active step: show spinning gear
-          html += `<li>${steps[i]} <span class="scrolling-gear">⚙️</span></li>`;
-        } else {
-          // Future step: no extra icon
-          html += `<li>${steps[i]}</li>`;
-        }
-      }
-      html += '</ul>';
-      updateStatus(html, 'warning');
-    }
-
-    // UI Update functions
-    function showReportLink(url) {
-      resultContainer.innerHTML = `
-        <div class="status success">
-          تم إنشاء التقرير بنجاح!<br>
-          <a href="${encodeURI(url)}" target="_blank" rel="noopener">تحميل📄⬇️ تقرير PDF</a>
-          <img 
-            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" 
-            alt="QR Code"
-          />
-        </div>
-      `;
-      updateStatus('جاهز', 'success');
-    }
-
-    function updateStatus(message, type = 'warning') {
-      statusMessage.className = `status ${type}`;
-      statusMessage.innerHTML = message;
-    }
-
-    function showError(message) {
-      console.error(message);
-      updateStatus(message, 'error');
-      resultContainer.innerHTML = '';
-    }
-
-    function resetUI() {
-      resultContainer.innerHTML = '';
-      statusMessage.className = 'status';
-      statusMessage.innerHTML = '';
-    }
   </script>
 </body>
 </html>
