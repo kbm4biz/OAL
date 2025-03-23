@@ -177,6 +177,18 @@
         padding: 0.75rem;
       }
     }
+
+    /* New CSS for the scrolling gear emoji */
+    .scrolling-gear {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   </style>
   <script>
     const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
@@ -329,21 +341,25 @@
       }
     });
 
-    // Polling function for async operations
+    // Polling function for async operations with professional loading
     async function pollReportStatus(statusUrl) {
-      let attempts = 0;
+      let attempt = 0;
+      const loadingSteps = [
+        "جاري جلب البيانات<br>جاري تحليل البيانات",
+        "جاري رسم الخطة الشجرية",
+        "جاري اعداد المخططات البيانية<br>الاعداد النهائي للملخص الشامل"
+      ];
+
       try {
-        while (attempts < MAX_POLL_ATTEMPTS) {
+        while (attempt < MAX_POLL_ATTEMPTS) {
+          const stepIndex = attempt % loadingSteps.length;
+          updateLoadingUI(loadingSteps, stepIndex);
+
+          // Wait for 3 seconds for each step
+          await new Promise(resolve => setTimeout(resolve, 3000));
+
           const response = await fetch(statusUrl);
           const data = await response.json();
-
-          updateStatus(`جاري إعداد التقرير (الخطوة ${attempts + 1}/${MAX_POLL_ATTEMPTS}) 
-            <span class="emoji-group">
-              <span class="floating-emoji">📚</span>
-              <span class="floating-emoji">🎓</span>
-              <span class="floating-emoji">📝</span>
-            </span>`
-          );
 
           if (data.status === 'Succeeded') {
             const finalUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
@@ -353,13 +369,22 @@
           if (data.reportUrl) return showReportLink(data.reportUrl);
           if (data.status === 'Failed') throw new Error(data.error?.message || 'فشل إنشاء التقرير');
 
-          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
-          attempts++;
+          attempt++;
         }
         throw new Error('انتهت مهلة إنشاء التقرير');
       } catch (error) {
         showError(error.message);
       }
+    }
+
+    // Function to update the loading UI with bullet points and a scrolling gear emoji
+    function updateLoadingUI(steps, activeIndex) {
+      let html = '<ul>';
+      for (let i = 0; i < steps.length; i++) {
+        html += `<li>${steps[i]} ${i === activeIndex ? '<span class="scrolling-gear">⚙️</span>' : ''}</li>`;
+      }
+      html += '</ul>';
+      updateStatus(html, 'warning');
     }
 
     // UI Update functions
