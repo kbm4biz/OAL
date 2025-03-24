@@ -210,6 +210,8 @@
       display: inline-block;
       padding-left: 100%;
       animation: scrollLeft 20s linear infinite;
+      animation-fill-mode: both; /* Ensures styles are applied immediately */
+      will-change: transform;   /* Optimizes performance */
       margin: 0;
     }
 
