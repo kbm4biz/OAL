@@ -268,7 +268,7 @@
   <div class="emoji-background" id="emojiContainer"></div>
 
   <div class="card">
-    <h1>إنشاء تقرير الخطه الشجريه للمقررات </h1>
+    <h1>إنشاء الملخص الشامل للمتدرب  </h1>
     
     <!-- The form. It will be hidden if ENABLE_FORM is false -->
     <form id="reportForm">
@@ -286,7 +286,7 @@
         >
       </div>
       
-      <button type="submit" id="submitBtn">إنشاء التقرير</button>
+      <button type="submit" id="submitBtn">إنشاء الملخص</button>
     </form>
     <!-- Disabled form message (shown when ENABLE_FORM is false) -->
     <div id="formDisabledMessage" style="display:none;">
@@ -367,7 +367,7 @@
     function showReportLink(url) {
       resultContainer.innerHTML = `
         <div class="status success">
-          تم إنشاء التقرير بنجاح!<br>
+          تم إنشاء الملخص بنجاح!<br>
           <a href="${encodeURI(url)}" target="_blank" rel="noopener">تحميل📄⬇️ تقرير PDF</a>
           <img 
             src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" 
@@ -478,7 +478,7 @@
           }
           if (data.status === 'Failed') {
             progress.stop();
-            throw new Error(data.error?.message || 'فشل إنشاء التقرير');
+            throw new Error(data.error?.message || 'فشل إنشاء الملخص');
           }
           await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
         }
@@ -524,7 +524,7 @@
         else if (response.ok) {
           const data = await response.json();
           if (data.reportUrl) showReportLink(data.reportUrl);
-          else throw new Error('لا يوجد رابط التقرير في الاستجابة');
+          else throw new Error('لا يوجد رابط الملخص في الاستجابة');
         } 
         else {
           throw new Error(`خطأ HTTP! الحالة: ${response.status}`);
