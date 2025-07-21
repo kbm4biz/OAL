@@ -1,7 +1,7 @@
 const CACHE_NAME = 'digital-guidance-v1';
 // Add the paths to your icon files here
 const URLS_TO_CACHE = [
-  '/',
+  './',
   'index.html',
   'manifest.json',
   'icon-192.png',
