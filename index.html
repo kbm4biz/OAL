@@ -63,10 +63,9 @@
       user-select: none;
     }
     .emoji-scroll img {
-  display: inline-block;
-  vertical-align: middle;
-}
-
+        display: inline-block;
+        vertical-align: middle;
+    }
 
     @keyframes scrollUp {
       from { transform: translateY(100vh); }
@@ -183,7 +182,6 @@
       }
     }
 
-    /* New CSS for the scrolling gear emoji */
     .scrolling-gear {
       display: inline-block;
       animation: spin 10s linear infinite;
@@ -195,7 +193,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* New CSS for the scrolling news banner */
     .news-banner {
       background: red;
       color: white;
@@ -215,8 +212,8 @@
       display: inline-block;
       padding-left: 100%;
       animation: scrollLeft 20s linear infinite;
-      animation-fill-mode: both; /* Ensures styles are applied immediately */
-      will-change: transform;   /* Optimizes performance */
+      animation-fill-mode: both;
+      will-change: transform;
       margin: 0;
     }
 
@@ -224,8 +221,7 @@
       0% { transform: translateX(100%); }
       100% { transform: translateX(-100%); }
     }
-
-    /* Style for the disabled form message */
+    
     #formDisabledMessage {
       text-align: center;
       color: red;
@@ -234,18 +230,25 @@
     }
   </style>
   <script>
-    // Configuration flags (set these to true or false as needed)
-    const ENABLE_FORM = true;        // Set to false to disable the form
-    const ENABLE_BANNER = false;      // Set to false to hide the news banner
-    const NEWS_BANNER_TEXT = "الخدمة تحت التجربة !"; // Change the banner text as needed
+    // Configuration flags
+    const ENABLE_FORM = true;
+    const ENABLE_BANNER = false;
+    const NEWS_BANNER_TEXT = "الخدمة تحت التجربة !";
 
     const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
     const TRAINEES_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQhbfADDHMJLwjTU5ZL9mJGCIyJhk3JfsvitZJkhNT0Y_hDEhc7T5j1w3aAO8IKTRiIMQcEHp5H2_pG/pub?gid=0&single=true&output=csv';
     const POLL_INTERVAL = 1500;
 
-    // DOMContentLoaded to ensure elements are available
-    document.addEventListener("DOMContentLoaded", function() {
-      // Toggle the news banner visibility and set its text
+    // ======================================================
+    // NEW: GPS CONFIGURATION FROM CODE #1
+    // ======================================================
+    const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
+    const RADIUS_KM = 0.2; // Allowed distance in kilometers
+    let locationData = null; // This will hold the parsed location data
+    // ======================================================
+
+    document.addEventListener("DOMContentLoaded", async function() {
+      // Toggle the news banner
       const banner = document.getElementById('newsBanner');
       if (!ENABLE_BANNER) {
         banner.style.display = "none";
@@ -254,50 +257,43 @@
         banner.querySelector('p').textContent = NEWS_BANNER_TEXT;
       }
       
-      // Toggle the form availability
+      // Toggle form availability
       if (!ENABLE_FORM) {
         document.getElementById('reportForm').style.display = "none";
         document.getElementById('formDisabledMessage').style.display = "block";
+      }
+
+      // NEW: Preload location data on page load for faster checks
+      try {
+        const response = await fetch(LOCATION_SHEET_URL);
+        if (!response.ok) throw new Error('Network response for location data was not ok');
+        const csvText = await response.text();
+        locationData = processLocationCSV(csvText);
+        console.log('Location data loaded successfully.');
+      } catch (error) {
+        console.error('Failed to load location data:', error);
+        // Disable the form if location data is critical and fails to load
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('studentId').placeholder = "خطأ في تحميل بيانات الموقع";
+        showError('فشل تحميل بيانات الموقع. لا يمكن المتابعة.');
       }
     });
   </script>
 </head>
 <body>
-  <!-- Scrolling news banner -->
-  <div id="newsBanner" class="news-banner">
-    <p></p>
-  </div>
-
+  <div id="newsBanner" class="news-banner"><p></p></div>
   <h2 class="platform-header">منصة الارشاد الرقمي</h2>
-
   <div class="emoji-background" id="emojiContainer"></div>
-
   <div class="card">
-    <h1>إنشاء الملخص الشامل للمتدرب  </h1>
-    
-    <!-- The form. It will be hidden if ENABLE_FORM is false -->
+    <h1>إنشاء الملخص الشامل للمتدرب </h1>
     <form id="reportForm">
       <div class="form-group">
         <label for="studentId">رقم المتدرب</label>
-        <input 
-          type="text" 
-          id="studentId" 
-          name="studentId"
-          required
-          pattern="4\d{8}"
-          inputmode="numeric"
-          placeholder="أدخل رقم المتدرب"
-          title="رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4"
-        >
+        <input type="text" id="studentId" name="studentId" required pattern="4\d{8}" inputmode="numeric" placeholder="أدخل رقم المتدرب" title="رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4">
       </div>
-      
       <button type="submit" id="submitBtn">إنشاء الملخص</button>
     </form>
-    <!-- Disabled form message (shown when ENABLE_FORM is false) -->
-    <div id="formDisabledMessage" style="display:none;">
-      الخدمة متوقفة حالياو حاول جددا
-    </div>
-
+    <div id="formDisabledMessage" style="display:none;">الخدمة متوقفة حاليا حاول مجددا</div>
     <div class="response-container" id="responseContainer">
       <div class="status" id="statusMessage"></div>
       <div id="resultContainer"></div>
@@ -317,33 +313,27 @@
     const resultContainer = document.getElementById('resultContainer');
     const emojiContainer = document.getElementById('emojiContainer');
     const emojis = ['📚', '🎓', '📝', '📖', '✏️', '🏫'];
-    // URL for your custom logo image (update this with your actual URL)
     const customLogoUrl = "https://i.postimg.cc/jSwbLwry/Asset-18.jpg";
 
-    // Floating item creation function (emoji or logo)
     function createFloatingItem() {
       const floatingItem = document.createElement('div');
       floatingItem.className = 'emoji-scroll';
       floatingItem.style.left = `${Math.random() * 100}%`;
       floatingItem.style.animationDuration = `${10 + Math.random() * 20}s`;
       
-      // Randomly decide whether to show the logo (30% chance) or an emoji.
       if (Math.random() < 0.3) {
         const img = document.createElement('img');
         img.src = customLogoUrl;
         img.alt = " ";
-        // Set the display size (adjust as needed)
         img.style.height = "30px";
         img.style.width = "auto";
         floatingItem.appendChild(img);
       } else {
         floatingItem.textContent = emojis[Math.floor(Math.random() * emojis.length)];
       }
-      
       emojiContainer.appendChild(floatingItem);
     }
 
-    // Start the floating items animation
     function startEmojiAnimation() {
       emojiContainer.innerHTML = '';
       for (let i = 0; i < 20; i++) {
@@ -351,7 +341,6 @@
       }
     }
 
-    // Timestamp updates
     function updateTimestamp() {
       const options = { hour: 'numeric', minute: '2-digit', hour12: true };
       document.getElementById('timestamp').textContent = new Date().toLocaleTimeString('ar-EG', options);
@@ -359,14 +348,10 @@
     setInterval(updateTimestamp, 1000);
     updateTimestamp();
 
-    // CSV Validation
     async function validateTrainee(studentId) {
-      // First validation: Format check
       if (!/^4\d{8}$/.test(studentId)) {
         throw new Error('رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4');
       }
-
-      // Second validation: CSV check
       try {
         const response = await fetch(TRAINEES_CSV_URL);
         if (!response.ok) throw new Error('تعذر تحميل قائمة المتدربين');
@@ -374,7 +359,6 @@
         const validIDs = csvData.split('\n')
           .map(row => row.split(',')[0]?.trim())
           .filter(id => id && /^4\d{8}$/.test(id));
-
         if (!validIDs.includes(studentId)) {
           throw new Error('تأكد من الرقم التدريبي, الخدمة فقط لمتدربين قسم تقنية الأعمال في كلية حائل-بنين');
         }
@@ -384,18 +368,93 @@
       }
     }
 
-    // UI Update functions
+    // ======================================================
+    // NEW: GPS HELPER FUNCTIONS FROM CODE #1
+    // ======================================================
+    function processLocationCSV(csvText) {
+      const lines = csvText.trim().split('\n');
+      const locations = [];
+      for (let i = 0; i < lines.length; i++) {
+        const cols = lines[i].split(',');
+        if (cols.length < 4) continue;
+        const lat = parseFloat(cols[0]?.trim());
+        const lon = parseFloat(cols[1]?.trim());
+        const address = cols[3]?.trim() || 'غير معروف';
+        if (!isNaN(lat) && !isNaN(lon)) {
+          locations.push({ lat, lon, address });
+        }
+      }
+      return locations;
+    }
+
+    function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = deg2rad(lat2 - lat1);
+      const dLon = deg2rad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function deg2rad(deg) {
+      return deg * (Math.PI / 180);
+    }
+
+    function findNearestLocation(userLat, userLon) {
+      if (!locationData || locationData.length === 0) return null;
+      let nearest = null;
+      let minDistance = Number.MAX_VALUE;
+      for (const loc of locationData) {
+        const distance = getDistanceFromLatLonInKm(userLat, userLon, loc.lat, loc.lon);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = { ...loc, distance };
+        }
+      }
+      return minDistance <= RADIUS_KM ? nearest : null;
+    }
+
+    function performGpsCheck() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          return reject(new Error('متصفحك لا يدعم تحديد الموقع الجغرافي.'));
+        }
+        if (!locationData) {
+          return reject(new Error('بيانات الموقع غير محملة. لا يمكن التحقق.'));
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
+            const validLocation = findNearestLocation(userLat, userLon);
+
+            if (validLocation) {
+              console.log(`Location valid: In range of ${validLocation.address}`);
+              resolve(validLocation); // Success
+            } else {
+              reject(new Error('أنت لست في الموقع المطلوب لإنشاء الملخص.'));
+            }
+          },
+          (error) => {
+            console.error('Geolocation error:', error);
+            reject(new Error('تعذر الحصول على موقعك. الرجاء السماح بالوصول للموقع والمحاولة مرة أخرى.'));
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      });
+    }
+    // ======================================================
+
     function showReportLink(url) {
       resultContainer.innerHTML = `
         <div class="status success">
           تم إنشاء الملخص بنجاح!<br>
           <a href="${encodeURI(url)}" target="_blank" rel="noopener">تحميل📄⬇️ تقرير PDF</a>
-          <img 
-            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" 
-            alt="QR Code"
-          />
-        </div>
-      `;
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" alt="QR Code" />
+        </div>`;
       updateStatus('جاهز', 'success');
     }
 
@@ -416,7 +475,6 @@
       statusMessage.innerHTML = '';
     }
 
-    // Function to update the loading UI with step indicators.
     function updateStepsUI(steps, activeStep) {
       let html = '<ul>';
       for (let i = 0; i < steps.length; i++) {
@@ -432,12 +490,10 @@
       updateStatus(html, 'warning');
     }
 
-    // Function to simulate progress through steps
     function startProgressSteps(steps, updateCallback) {
       let currentStep = 0;
       let stopped = false;
       let timer;
-      
       function nextStep() {
         if (stopped) return;
         if (currentStep < steps.length - 1) {
@@ -450,25 +506,15 @@
           timer = setTimeout(nextStep, 3000);
         }
       }
-      
       updateCallback(steps, currentStep);
       const initialDelay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
       timer = setTimeout(nextStep, initialDelay);
-      
       return {
-        stop: () => {
-          stopped = true;
-          clearTimeout(timer);
-        },
-        complete: () => {
-          stopped = true;
-          currentStep = steps.length;
-          updateCallback(steps, currentStep);
-        }
+        stop: () => { stopped = true; clearTimeout(timer); },
+        complete: () => { stopped = true; currentStep = steps.length; updateCallback(steps, currentStep); }
       };
     }
 
-    // Polling function for async operations with decoupled UI progress.
     async function pollReportStatus(statusUrl) {
       const steps = [
         "جاري جلب البيانات",
@@ -477,14 +523,11 @@
         "جاري اعداد المخططات البيانية",
         "الاعداد النهائي للملخص الشامل"
       ];
-      
       const progress = startProgressSteps(steps, updateStepsUI);
-      
       try {
         while (true) {
           const response = await fetch(statusUrl);
           const data = await response.json();
-          
           if (data.status === 'Succeeded') {
             const finalUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
             if (finalUrl) {
@@ -509,7 +552,7 @@
       }
     }
 
-    // Form submission handler
+    // MODIFIED: Form submission handler to include the GPS check
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (submitBtn.disabled) return;
@@ -522,17 +565,22 @@
       const studentId = document.getElementById('studentId').value.trim();
 
       try {
-        // Perform validations
+        // Step 1: Validate trainee ID
+        updateStatus('جاري التحقق من رقم المتدرب...', 'warning');
         await validateTrainee(studentId);
-
-        // Trigger Power Automate flow
+        
+        // Step 2: NEW - Perform GPS Check
+        updateStatus('جاري التحقق من الموقع الجغرافي... يرجى السماح بالوصول لموقعك.', 'warning');
+        await performGpsCheck();
+        updateStatus('تم التحقق من الموقع بنجاح.', 'success');
+        
+        // Step 3: Trigger Power Automate flow
         const response = await fetch(FLOW_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ studentId })
         });
 
-        // Handle flow response
         if (response.status === 202) {
           let statusUrl = response.headers.get('Location');
           if (!statusUrl) {
@@ -541,13 +589,11 @@
           }
           if (!statusUrl) throw new Error('لا يوجد رابط الحالة في الاستجابة');
           await pollReportStatus(statusUrl);
-        } 
-        else if (response.ok) {
+        } else if (response.ok) {
           const data = await response.json();
           if (data.reportUrl) showReportLink(data.reportUrl);
           else throw new Error('لا يوجد رابط الملخص في الاستجابة');
-        } 
-        else {
+        } else {
           throw new Error(`خطأ HTTP! الحالة: ${response.status}`);
         }
       } catch (error) {
