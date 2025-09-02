@@ -233,13 +233,18 @@
       border-radius: 8px;
     }
   </style>
+
   <script>
     // ======================================================
     // CONFIGURATION FLAGS
     // ======================================================
-    const ENABLE_FORM = true;      // NEW: Set to false to disable the form and show a maintenance message.
-    const ENABLE_BANNER = true;     // Set to true to show the scrolling news banner.
+    const ENABLE_FORM = true;        // Set to false to disable the form and show a maintenance message.
+    const ENABLE_BANNER = true;      // Show the scrolling news banner.
     const NEWS_BANNER_TEXT = " جاري تحديث البيانات"; // Text for the news banner.
+
+    // NEW: Prefill & auto-submit configuration
+    const AUTO_SUBMIT_ON_PREFILL = true;      // اضبطها على false لإلغاء الإرسال التلقائي بعد التعبئة
+    const PREFILL_KEYS = ["studentId", "id"]; // مفاتيح الاستعلام المقبولة من رابط الصفحة
     // ======================================================
 
     const FLOW_ENDPOINT = 'https://prod-156.westeurope.logic.azure.com:443/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Fo7cqwq3RB_57ntksgNijWDdNJU32nb0KQKUmo9KaHc';
@@ -250,7 +255,6 @@
     const RADIUS_KM = 99999999; //0.2;
     let locationData = null;
 
-    // MODIFIED: This script now also handles the maintenance mode check.
     document.addEventListener("DOMContentLoaded", async function() {
       // Handle banner visibility
       const banner = document.getElementById('newsBanner');
@@ -261,7 +265,7 @@
         banner.querySelector('p').textContent = NEWS_BANNER_TEXT;
       }
       
-      // NEW: Handle maintenance mode for the form
+      // Maintenance mode
       if (!ENABLE_FORM) {
         document.getElementById('reportForm').style.display = "none";
         document.getElementById('formDisabledMessage').style.display = "block";
@@ -282,6 +286,47 @@
             showError('فشل تحميل بيانات الموقع. لا يمكن المتابعة.');
         }
       }
+
+      // ============================
+      // NEW: Prefill from URL + auto-submit (after location data is ready)
+      // ============================
+      try {
+        const params = new URLSearchParams(location.search);
+
+        // allow opting-out: ?nosubmit=1  (keeps prefill but no auto submit)
+        const noSubmit = params.has('nosubmit');
+
+        // accept either ?studentId=... or ?id=...
+        const raw =
+          PREFILL_KEYS.map(k => params.get(k))
+                      .find(v => v && v.trim().length > 0) || "";
+
+        if (raw) {
+          const input = document.getElementById('studentId');
+          // keep digits only (your pattern requires 4 + 8 digits = 9 digits)
+          const cleaned = raw.trim().replace(/\D+/g, "");
+          input.value = cleaned;
+
+          // Only auto-submit if: enabled, form is active, submit not disabled, and no ?nosubmit
+          if (
+            cleaned &&
+            AUTO_SUBMIT_ON_PREFILL &&
+            !noSubmit &&
+            ENABLE_FORM &&
+            !document.getElementById('submitBtn').disabled
+          ) {
+            // Use next tick to ensure all listeners are bound
+            setTimeout(() => {
+              const formEl = document.getElementById('reportForm');
+              if (formEl.requestSubmit) formEl.requestSubmit();
+              else formEl.querySelector('button[type="submit"]').click();
+            }, 0);
+          }
+        }
+      } catch (e) {
+        console.warn("Prefill error:", e);
+      }
+      // ============================
     });
   </script>
 </head>
@@ -316,9 +361,7 @@
   </footer>
 
   <script>
-    // This script tag contains all the functions from the previous version.
-    // They are unchanged and remain below this comment block.
-    // ... (validateTrainee, performGpsCheck, pollReportStatus, etc.)
+    // --- كل سكربتاتك كما هي (بدون تغيير) ---
     const form = document.getElementById('reportForm');
     const submitBtn = document.getElementById('submitBtn');
     const responseContainer = document.getElementById('responseContainer');
