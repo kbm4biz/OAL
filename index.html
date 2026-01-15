@@ -1,50 +1,238 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"/>
   <title>منصة الارشاد الرقمي</title>
+
   <style>
-    /* All original CSS remains unchanged */
-    :root {
-      --primary: #2196F3;
-      --success: #4CAF50;
-      --error: #f44336;
-      --warning: #ff9800;
+    /* =========================
+       MODERN GREEN THEME (UI ONLY)
+       ========================= */
+    :root{
+      --primary: #16a34a;      /* Green */
+      --primary-2:#22c55e;     /* Light green */
+      --success: #16a34a;
+      --error: #ef4444;
+      --warning: #f59e0b;
+
+      --bg: #f6fbf7;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(15, 23, 42, .10);
+
+      --shadow: 0 10px 30px rgba(2, 44, 19, .08);
+      --shadow-2: 0 6px 14px rgba(2, 44, 19, .10);
+
+      --radius: 16px;
     }
 
-    body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #fafafa;
-      max-width: 600px;
+    body{
+      font-family: 'Cairo', system-ui, 'Segoe UI', sans-serif;
+      background: radial-gradient(1200px 500px at 20% -10%, rgba(34,197,94,.14), transparent 60%),
+                  radial-gradient(1200px 500px at 80% 0%, rgba(22,163,74,.10), transparent 55%),
+                  var(--bg);
+      max-width: 640px;
       margin: 2rem auto;
-      padding: 0 1rem 80px;
+      padding: 0 1rem 92px;
       direction: rtl;
       position: relative;
+      color: var(--text);
     }
 
-    .platform-header {
-      text-align: center;
-      color: var(--primary);
-      margin: 1rem 0;
+    .platform-header{
+      text-align:center;
+      margin: 1.25rem 0 0.75rem;
       font-size: 2rem;
-      font-weight: bold;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: .2px;
     }
 
-    .card {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      padding: 2rem;
+    .platform-subtitle{
+      text-align:center;
+      margin: 0 0 1.25rem;
+      color: var(--muted);
+      font-size: .95rem;
+    }
+
+    .card{
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.75rem;
       margin: 1rem auto;
       width: 100%;
       box-sizing: border-box;
       position: relative;
       z-index: 1;
+      border: 1px solid var(--border);
+      overflow: hidden;
     }
 
-    .emoji-background {
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: linear-gradient(120deg, rgba(34,197,94,.10), rgba(22,163,74,.02));
+      pointer-events:none;
+    }
+
+    .card > *{
+      position: relative;
+      z-index: 1;
+    }
+
+    h1{
+      margin: 0 0 1.25rem;
+      font-size: 1.25rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .form-group{
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    label{
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    input{
+      width: 100%;
+      max-width: 420px;
+      padding: 0.85rem 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 1rem;
+      margin: 0 auto 0.25rem;
+      display: block;
+      text-align: right;
+      background: rgba(255,255,255,.9);
+      outline: none;
+      transition: box-shadow .2s, border-color .2s, transform .1s;
+    }
+
+    input:focus{
+      border-color: rgba(34,197,94,.65);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.18);
+    }
+
+    .hint{
+      text-align:center;
+      color: var(--muted);
+      font-size: .85rem;
+      margin-top: .25rem;
+    }
+
+    button{
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: white;
+      border: none;
+      padding: 0.85rem 1.25rem;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 800;
+      transition: transform .08s ease, opacity 0.2s, box-shadow .2s;
+      display: block;
+      margin: 1rem auto 0.25rem;
+      width: 220px;
+      max-width: 100%;
+      box-shadow: var(--shadow-2);
+    }
+
+    button:hover{ transform: translateY(-1px); }
+    button:active{ transform: translateY(0px); opacity: .95; }
+
+    button:disabled{
+      background: #cbd5e1;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .response-container{
+      margin-top: 1.25rem;
+      display: none;
+      text-align: center;
+    }
+
+    .status{
+      padding: 1rem;
+      border-radius: 14px;
+      margin: 1rem 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      text-align: right;
+      line-height: 1.8;
+    }
+
+    .status.success{
+      background: rgba(34,197,94,.10);
+      border-color: rgba(34,197,94,.25);
+    }
+
+    .status.error{
+      background: rgba(239,68,68,.10);
+      border-color: rgba(239,68,68,.22);
+    }
+
+    .status.warning{
+      background: rgba(245,158,11,.10);
+      border-color: rgba(245,158,11,.22);
+    }
+
+    .status a{
+      display: inline-block;
+      margin-top: .65rem;
+      padding: .6rem .8rem;
+      border-radius: 12px;
+      background: rgba(34,197,94,.14);
+      color: #065f46;
+      text-decoration: none;
+      font-weight: 800;
+      border: 1px solid rgba(34,197,94,.22);
+    }
+
+    .status img{
+      display: block;
+      margin: .9rem auto 0;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: .35rem;
+    }
+
+    .footer{
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      padding: 0.9rem 1rem;
+      text-align: center;
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-direction: row-reverse;
+      color: var(--muted);
+    }
+
+    /* Emoji background (kept) */
+    .emoji-background{
       position: fixed;
       top: 0;
       left: 0;
@@ -55,150 +243,41 @@
       overflow: hidden;
     }
 
-    .emoji-scroll {
+    .emoji-scroll{
       position: absolute;
       animation: scrollUp 20s linear infinite;
-      opacity: 0.2;
+      opacity: 0.18;
       font-size: 1.5rem;
       user-select: none;
+      filter: saturate(1.1);
     }
-    .emoji-scroll img {
-        display: inline-block;
-        vertical-align: middle;
+    .emoji-scroll img{
+      display: inline-block;
+      vertical-align: middle;
     }
-
-    @keyframes scrollUp {
+    @keyframes scrollUp{
       from { transform: translateY(100vh); }
-      to { transform: translateY(-100%); }
+      to   { transform: translateY(-120%); }
     }
 
-    .form-group {
-      margin-bottom: 1.5rem;
-      text-align: center;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-    }
-
-    input {
-      width: 100%;
-      max-width: 400px;
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 1rem;
-      margin: 0 auto 0.5rem;
-      display: block;
-      text-align: right;
-    }
-
-    button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: opacity 0.2s;
-      display: block;
-      margin: 1rem auto;
-      width: 200px;
-      max-width: 100%;
-    }
-
-    button:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    .response-container {
-      margin-top: 1.5rem;
-      display: none;
-      text-align: center;
-    }
-
-    .status {
-      padding: 1rem;
-      border-radius: 4px;
-      margin: 1rem 0;
-      background: #fff;
-    }
-
-    .status.success {
-      background: #e7f8e9;
-    }
-
-    .status.error {
-      background: #fdebec;
-    }
-
-    .status.warning {
-      background: #fff7e5;
-    }
-
-    .footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 1rem;
-      text-align: center;
-      font-size: 0.9rem;
-      border-top: 1px solid #ddd;
-      z-index: 2;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-direction: row-reverse;
-    }
-
-    @media (max-width: 480px) {
-      .card {
-        padding: 1rem;
-      }
-      
-      .platform-header {
-        font-size: 1.5rem;
-      }
-
-      h1 {
-        font-size: 1.2rem;
-      }
-
-      button {
-        width: 100%;
-        padding: 0.75rem;
-      }
-
-      .footer {
-        flex-direction: column;
-        gap: 0.5rem;
-        padding: 0.75rem;
-      }
-    }
-
-    .scrolling-gear {
+    /* Gear (kept) */
+    .scrolling-gear{
       display: inline-block;
       animation: spin 10s linear infinite;
       margin-left: 10px;
     }
-
-    @keyframes spin {
+    @keyframes spin{
       from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      to   { transform: rotate(360deg); }
     }
 
-    .news-banner {
-      background: red;
+    /* Banner modernized to green */
+    .news-banner{
+      background: linear-gradient(135deg, #16a34a, #22c55e);
       color: white;
       padding: 10px 0;
       text-align: center;
-      font-weight: bold;
+      font-weight: 900;
       overflow: hidden;
       white-space: nowrap;
       position: fixed;
@@ -206,9 +285,9 @@
       left: 0;
       width: 100%;
       z-index: 3;
+      box-shadow: 0 6px 16px rgba(2,44,19,.18);
     }
-
-    .news-banner p {
+    .news-banner p{
       display: inline-block;
       padding-left: 100%;
       animation: scrollLeft 20s linear infinite;
@@ -216,21 +295,35 @@
       will-change: transform;
       margin: 0;
     }
-
-    @keyframes scrollLeft {
+    @keyframes scrollLeft{
       0% { transform: translateX(100%); }
       100% { transform: translateX(-100%); }
     }
-    
-    /* NEW: Style for the maintenance mode message */
-    #formDisabledMessage {
+
+    /* Maintenance message */
+    #formDisabledMessage{
       text-align: center;
-      color: var(--error);
-      font-weight: bold;
-      margin: 2rem 0;
+      color: #991b1b;
+      font-weight: 900;
+      margin: 1.25rem 0;
       padding: 1rem;
-      background: #fdebec;
-      border-radius: 8px;
+      background: rgba(239,68,68,.10);
+      border: 1px solid rgba(239,68,68,.22);
+      border-radius: 14px;
+    }
+
+    /* Mobile */
+    @media (max-width: 480px){
+      .card{ padding: 1.1rem; }
+      .platform-header{ font-size: 1.6rem; }
+      h1{ font-size: 1.15rem; }
+      button{ width: 100%; }
+      .footer{
+        flex-direction: column;
+        gap: 0.4rem;
+        padding: 0.75rem;
+      }
+      body{ padding-bottom: 108px; }
     }
   </style>
 
@@ -240,11 +333,14 @@
     // ======================================================
     const ENABLE_FORM = true;        // Set to false to disable the form and show a maintenance message.
     const ENABLE_BANNER = true;      // Show the scrolling news banner.
-    const NEWS_BANNER_TEXT = " جاري تحديث البيانات"; // Text for the news banner.
+    const NEWS_BANNER_TEXT = "عدم مشاركة الرابط مع المتدربين 🚫📵";
 
-    // NEW: Prefill & auto-submit configuration
-    const AUTO_SUBMIT_ON_PREFILL = true;      // اضبطها على false لإلغاء الإرسال التلقائي بعد التعبئة
-    const PREFILL_KEYS = ["studentId", "id"]; // مفاتيح الاستعلام المقبولة من رابط الصفحة
+    // NEW: GPS easy on/off
+    const ENABLE_GPS_CHECK = false;   // ✅ true = enforce GPS, ❌ false = bypass GPS
+
+    // Prefill & auto-submit configuration
+    const AUTO_SUBMIT_ON_PREFILL = true;
+    const PREFILL_KEYS = ["studentId", "id"];
     // ======================================================
 
     const FLOW_ENDPOINT = 'https://defaultde8d64b779da419880c27b84343483.4f.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4255a7e944c347adac8f2230e02bc510/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=aeXEH2HrjtWGyc_hNgpP-iyFz3nrh4GiSVz2W0qmf6Y';
@@ -252,11 +348,11 @@
     const POLL_INTERVAL = 1500;
 
     const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
-    const RADIUS_KM = 99999999; //0.2;
+    const RADIUS_KM = 99999999; // 0.2;
     let locationData = null;
 
     document.addEventListener("DOMContentLoaded", async function() {
-      // Handle banner visibility
+      // Banner visibility
       const banner = document.getElementById('newsBanner');
       if (!ENABLE_BANNER) {
         banner.style.display = "none";
@@ -264,50 +360,47 @@
         banner.style.display = "block";
         banner.querySelector('p').textContent = NEWS_BANNER_TEXT;
       }
-      
+
       // Maintenance mode
       if (!ENABLE_FORM) {
         document.getElementById('reportForm').style.display = "none";
         document.getElementById('formDisabledMessage').style.display = "block";
       }
-      
-      // Preload location data
-      try {
-        const response = await fetch(LOCATION_SHEET_URL);
-        if (!response.ok) throw new Error('Network response for location data was not ok');
-        const csvText = await response.text();
-        locationData = processLocationCSV(csvText);
-        console.log('Location data loaded successfully.');
-      } catch (error) {
-        console.error('Failed to load location data:', error);
-        if (ENABLE_FORM) { // Only show error if form is supposed to be active
+
+      // Preload location data ONLY if GPS check enabled
+      if (ENABLE_GPS_CHECK) {
+        try {
+          const response = await fetch(LOCATION_SHEET_URL);
+          if (!response.ok) throw new Error('Network response for location data was not ok');
+          const csvText = await response.text();
+          locationData = processLocationCSV(csvText);
+          console.log('Location data loaded successfully.');
+        } catch (error) {
+          console.error('Failed to load location data:', error);
+          if (ENABLE_FORM) {
             document.getElementById('submitBtn').disabled = true;
             document.getElementById('studentId').placeholder = "خطأ في تحميل بيانات الموقع";
             showError('فشل تحميل بيانات الموقع. لا يمكن المتابعة.');
+          }
         }
+      } else {
+        console.log('GPS check is disabled by config flag.');
       }
 
-      // ============================
-      // NEW: Prefill from URL + auto-submit (after location data is ready)
-      // ============================
+      // Prefill from URL + auto-submit
       try {
         const params = new URLSearchParams(location.search);
-
-        // allow opting-out: ?nosubmit=1  (keeps prefill but no auto submit)
         const noSubmit = params.has('nosubmit');
 
-        // accept either ?studentId=... or ?id=...
         const raw =
           PREFILL_KEYS.map(k => params.get(k))
                       .find(v => v && v.trim().length > 0) || "";
 
         if (raw) {
           const input = document.getElementById('studentId');
-          // keep digits only (your pattern requires 4 + 8 digits = 9 digits)
           const cleaned = raw.trim().replace(/\D+/g, "");
           input.value = cleaned;
 
-          // Only auto-submit if: enabled, form is active, submit not disabled, and no ?nosubmit
           if (
             cleaned &&
             AUTO_SUBMIT_ON_PREFILL &&
@@ -315,7 +408,6 @@
             ENABLE_FORM &&
             !document.getElementById('submitBtn').disabled
           ) {
-            // Use next tick to ensure all listeners are bound
             setTimeout(() => {
               const formEl = document.getElementById('reportForm');
               if (formEl.requestSubmit) formEl.requestSubmit();
@@ -326,27 +418,42 @@
       } catch (e) {
         console.warn("Prefill error:", e);
       }
-      // ============================
     });
   </script>
 </head>
+
 <body>
   <div id="newsBanner" class="news-banner"><p></p></div>
+
   <h2 class="platform-header">منصة الارشاد الرقمي</h2>
+  <div class="platform-subtitle">إنشاء الملخص الشامل للمتدرب بطريقة سريعة وآمنة</div>
+
   <div class="emoji-background" id="emojiContainer"></div>
+
   <div class="card">
-    <h1>إنشاء الملخص الشامل للمتدرب </h1>
-    
+    <h1>إنشاء الملخص الشامل للمتدرب</h1>
+
     <form id="reportForm">
       <div class="form-group">
         <label for="studentId">رقم المتدرب</label>
-        <input type="text" id="studentId" name="studentId" required pattern="4\d{8}" inputmode="numeric" placeholder="أدخل رقم المتدرب" title="رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4">
+        <input
+          type="text"
+          id="studentId"
+          name="studentId"
+          required
+          pattern="4\d{8}"
+          inputmode="numeric"
+          placeholder="أدخل رقم المتدرب"
+          title="رقم المتدرب يجب أن يكون 9 أرقام ويبدأ بالرقم 4"
+        >
+        <div class="hint">مثال: 4XXXXXXXX</div>
       </div>
+
       <button type="submit" id="submitBtn">إنشاء الملخص</button>
     </form>
 
     <div id="formDisabledMessage" style="display:none;">
-        الخدمة متوقفة حالياً للصيانة، الرجاء المحاولة في وقت لاحق.
+      الخدمة متوقفة حالياً للصيانة، الرجاء المحاولة في وقت لاحق.
     </div>
 
     <div class="response-container" id="responseContainer">
@@ -356,12 +463,12 @@
   </div>
 
   <footer class="footer">
-    <span>فكره واعداد خالد الأيداء</span>
+    <span>2026</span>
     <span id="timestamp"></span>
   </footer>
 
   <script>
-    // --- كل سكربتاتك كما هي (بدون تغيير) ---
+    // --- كل سكربتاتك كما هي (بدون تغيير بالمنطق) ---
     const form = document.getElementById('reportForm');
     const submitBtn = document.getElementById('submitBtn');
     const responseContainer = document.getElementById('responseContainer');
@@ -376,7 +483,7 @@
       floatingItem.className = 'emoji-scroll';
       floatingItem.style.left = `${Math.random() * 100}%`;
       floatingItem.style.animationDuration = `${10 + Math.random() * 20}s`;
-      
+
       if (Math.random() < 0.3) {
         const img = document.createElement('img');
         img.src = customLogoUrl;
@@ -423,7 +530,7 @@
         throw new Error('تعذر التحقق من الرقم التدريبي حالياً، يرجى المحاولة لاحقاً');
       }
     }
-    
+
     function processLocationCSV(csvText) {
       const lines = csvText.trim().split('\n');
       const locations = [];
@@ -471,6 +578,12 @@
 
     function performGpsCheck() {
       return new Promise((resolve, reject) => {
+        // NEW: bypass GPS if disabled
+        if (!ENABLE_GPS_CHECK) {
+          console.log('GPS check bypassed (ENABLE_GPS_CHECK = false).');
+          return resolve({ bypassed: true });
+        }
+
         if (!navigator.geolocation) {
           return reject(new Error('متصفحك لا يدعم تحديد الموقع الجغرافي.'));
         }
@@ -486,7 +599,7 @@
 
             if (validLocation) {
               console.log(`Location valid: In range of ${validLocation.address}`);
-              resolve(validLocation); // Success
+              resolve(validLocation);
             } else {
               reject(new Error('أنت لست في الموقع المطلوب لإنشاء الملخص.'));
             }
@@ -503,9 +616,9 @@
     function showReportLink(url) {
       resultContainer.innerHTML = `
         <div class="status success">
-          تم إنشاء الملخص بنجاح!<br>
-          <a href="${encodeURI(url)}" target="_blank" rel="noopener">تحميل📄⬇️ تقرير PDF</a>
-          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURI(url)}" alt="QR Code" />
+          <div style="font-weight:900; font-size:1.05rem;">تم إنشاء الملخص بنجاح ✅</div>
+          <a href="${encodeURI(url)}" target="_blank" rel="noopener">تحميل تقرير PDF 📄⬇️</a>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURI(url)}" alt="QR Code" />
         </div>`;
       updateStatus('جاهز', 'success');
     }
@@ -528,15 +641,24 @@
     }
 
     function updateStepsUI(steps, activeStep) {
-      let html = '<ul>';
+      let html = '<ul style="margin:0; padding:0 1rem; list-style:none; text-align:right;">';
       for (let i = 0; i < steps.length; i++) {
-        if (i < activeStep) {
-          html += `<li>${steps[i]} <span>✅</span></li>`;
-        } else if (i === activeStep) {
-          html += `<li>${steps[i]} <span class="scrolling-gear">⚙️</span></li>`;
-        } else {
-          html += `<li>${steps[i]}</li>`;
-        }
+        const isDone = i < activeStep;
+        const isActive = i === activeStep;
+
+        html += `
+          <li style="
+            padding:.55rem .6rem;
+            margin:.35rem 0;
+            border:1px solid rgba(15,23,42,.08);
+            border-radius:12px;
+            background:${isDone ? 'rgba(34,197,94,.10)' : (isActive ? 'rgba(245,158,11,.10)' : 'rgba(255,255,255,.9)')};
+          ">
+            ${steps[i]}
+            <span style="float:left; font-weight:900;">
+              ${isDone ? '✅' : (isActive ? '<span class="scrolling-gear">⚙️</span>' : '')}
+            </span>
+          </li>`;
       }
       html += '</ul>';
       updateStatus(html, 'warning');
@@ -546,8 +668,10 @@
       let currentStep = 0;
       let stopped = false;
       let timer;
+
       function nextStep() {
         if (stopped) return;
+
         if (currentStep < steps.length - 1) {
           currentStep++;
           updateCallback(steps, currentStep);
@@ -558,9 +682,11 @@
           timer = setTimeout(nextStep, 3000);
         }
       }
+
       updateCallback(steps, currentStep);
       const initialDelay = Math.floor(Math.random() * (4000 - 2000 + 1)) + 2000;
       timer = setTimeout(nextStep, initialDelay);
+
       return {
         stop: () => { stopped = true; clearTimeout(timer); },
         complete: () => { stopped = true; currentStep = steps.length; updateCallback(steps, currentStep); }
@@ -576,10 +702,12 @@
         "الاعداد النهائي للملخص الشامل"
       ];
       const progress = startProgressSteps(steps, updateStepsUI);
+
       try {
         while (true) {
           const response = await fetch(statusUrl);
           const data = await response.json();
+
           if (data.status === 'Succeeded') {
             const finalUrl = data?.output?.reportUrl || data?.properties?.outputs?.reportUrl;
             if (finalUrl) {
@@ -588,14 +716,17 @@
             }
             throw new Error('الرابط غير موجود في الاستجابة النهائية');
           }
+
           if (data.reportUrl) {
             progress.complete();
             return showReportLink(data.reportUrl);
           }
+
           if (data.status === 'Failed') {
             progress.stop();
             throw new Error(data.error?.message || 'فشل إنشاء الملخص');
           }
+
           await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
         }
       } catch (error) {
@@ -618,11 +749,22 @@
       try {
         updateStatus('جاري التحقق من رقم المتدرب...', 'warning');
         await validateTrainee(studentId);
-        
-        updateStatus('جاري التحقق من الموقع الجغرافي... يرجى السماح بالوصول لموقعك.', 'warning');
+
+        // GPS Step (respects ENABLE_GPS_CHECK)
+        if (ENABLE_GPS_CHECK) {
+          updateStatus('جاري التحقق من الموقع الجغرافي... يرجى السماح بالوصول لموقعك.', 'warning');
+        } else {
+          updateStatus('تم تجاوز التحقق من الموقع (GPS) حسب الإعدادات.', 'warning');
+        }
+
         await performGpsCheck();
-        updateStatus('تم التحقق من الموقع بنجاح.', 'success');
-        
+
+        if (ENABLE_GPS_CHECK) {
+          updateStatus('تم التحقق من الموقع بنجاح.', 'success');
+        } else {
+          updateStatus('متابعة بدون GPS ✅', 'success');
+        }
+
         const response = await fetch(FLOW_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -637,13 +779,16 @@
           }
           if (!statusUrl) throw new Error('لا يوجد رابط الحالة في الاستجابة');
           await pollReportStatus(statusUrl);
+
         } else if (response.ok) {
           const data = await response.json();
           if (data.reportUrl) showReportLink(data.reportUrl);
           else throw new Error('لا يوجد رابط الملخص في الاستجابة');
+
         } else {
           throw new Error(`خطأ HTTP! الحالة: ${response.status}`);
         }
+
       } catch (error) {
         showError(error.message);
       } finally {
