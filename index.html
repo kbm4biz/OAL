@@ -43,11 +43,12 @@
       direction: rtl;
       position: relative;
       color: var(--text);
+       padding-top: 65px; 
     }
 
     .platform-header{
       text-align:center;
-      margin: 1.25rem 0 0.75rem;
+      margin: 1.9rem 0 0.75rem;
       font-size: 2rem;
       font-weight: 800;
       color: var(--text);
@@ -295,9 +296,11 @@
       will-change: transform;
       margin: 0;
     }
-    @keyframes scrollLeft{
-      0% { transform: translateX(100%); }
-      100% { transform: translateX(-100%); }
+@keyframes scrollLeft{
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
     }
 
     /* Maintenance message */
